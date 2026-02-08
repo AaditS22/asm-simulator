@@ -10,10 +10,6 @@
         <property name="ignorePattern" value="^package|^import|https?://"/>
     </module>
 
-    <module name="RegexpSingleline">
-        <property name="format" value="\s+$"/>
-    </module>
-
     <module name="TreeWalker">
 
         <module name="JavadocMethod">
