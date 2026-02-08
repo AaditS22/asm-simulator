@@ -165,16 +165,27 @@ public class Memory {
         return result;
     }
 
+    /**
+     * Setter for stackViewStart
+     * @param stackViewStart the value to set it to
+     */
     public void setStackViewStart(long stackViewStart) {
         this.stackViewStart = stackViewStart;
     }
 
+    /**
+     * Getter for stackViewStart
+     * @return the current value as a long
+     */
     public long getStackViewStart() {
         return stackViewStart;
     }
 
     // Other util methods
 
+    /**
+     * Clears the data in the memory
+     */
     public void clearMemory() {
         data.clear();
     }
