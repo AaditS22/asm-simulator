@@ -39,5 +39,6 @@ also aid in debugging.
 * Java backend & JavaFX frontend
 * Code adheres to custom checkstyle configuration
 * Important features validated with unit testing
+* Follows MVC model with clear separation of concerns
 
 ---
