@@ -128,4 +128,14 @@ public class Flags {
         long mask = (numBits == 64) ? -1L : (1L << numBits) - 1;
         carryFlag = (operand & mask) != 0;
     }
+
+    /**
+     * Resets all flags back to false
+     */
+    public void resetFlags() {
+        zeroFlag = false;
+        signFlag = false;
+        carryFlag = false;
+        overflowFlag = false;
+    }
 }
