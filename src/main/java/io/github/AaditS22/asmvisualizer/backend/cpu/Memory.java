@@ -28,7 +28,7 @@ public class Memory {
      * @param bytes the number of bytes to read
      * @return the result (temporarily in long format)
      */
-    private long readN(long address, int bytes) {
+    public long readN(long address, int bytes) {
         long value = 0;
         for (int i = 0; i < bytes; i++) {
             // Non-existing addresses default to 0, AND operation with 0xFF done to unsign the byte
@@ -81,7 +81,7 @@ public class Memory {
      * @param value the value to write
      * @param bytes the number of bytes to write
      */
-    private void writeN(long address, long value, int bytes) {
+    public void writeN(long address, long value, int bytes) {
         for (int i = 0; i < bytes; i++) {
             // Grabs the last byte of the value
             byte b = (byte) (value & 0xFF);
