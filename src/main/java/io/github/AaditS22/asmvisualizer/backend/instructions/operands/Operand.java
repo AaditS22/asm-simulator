@@ -2,6 +2,7 @@ package io.github.AaditS22.asmvisualizer.backend.instructions.operands;
 
 import io.github.AaditS22.asmvisualizer.backend.cpu.CPUState;
 import io.github.AaditS22.asmvisualizer.backend.cpu.LabelManager;
+import io.github.AaditS22.asmvisualizer.backend.util.Size;
 
 public interface Operand {
     /**
@@ -9,9 +10,10 @@ public interface Operand {
      *
      * @param state the current state of the CPU, including registers, memory, and flags
      * @param labelManager the label manager that contains information about code and data labels
+     * @param operationSize the size of the operation, as a Size enum
      * @return the value determined by this operand
      */
-    long getValue(CPUState state, LabelManager labelManager);
+    long getValue(CPUState state, LabelManager labelManager, Size operationSize);
 
     /**
      * Updates the value associated with this operand
@@ -19,6 +21,7 @@ public interface Operand {
      * @param state the current state of the CPU, which includes registers, memory, and flags
      * @param labelManager the label manager containing information about code and data labels
      * @param value the new value to set for this operand
+     * @param operationSize the size of the operation, as a Size enum
      */
-    void setValue(CPUState state, LabelManager labelManager, long value);
+    void setValue(CPUState state, LabelManager labelManager, long value, Size operationSize);
 }
