@@ -1,4 +1,4 @@
-package io.github.AaditS22.asmvisualizer.backend.cpu;
+package io.github.AaditS22.asmvisualizer.backend.util;
 
 public enum RegisterInfo {
     // NOTE: LLMs were used to automate creating the values for each sub-register, as it is a tedious process manually
