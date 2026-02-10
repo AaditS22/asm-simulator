@@ -1,4 +1,130 @@
 package io.github.AaditS22.asmvisualizer.backend.instructions.operands;
 
-public class MemoryOperand {
+import io.github.AaditS22.asmvisualizer.backend.cpu.CPUState;
+import io.github.AaditS22.asmvisualizer.backend.cpu.LabelManager;
+import io.github.AaditS22.asmvisualizer.backend.util.Size;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+public class MemoryOperand implements Operand {
+    private final String rawText;
+    private final boolean onlyDisplacement;
+    private static final List<Integer> acceptedScales = new ArrayList<>(Arrays.asList(1, 2, 4, 8));
+
+    public MemoryOperand(String rawText) {
+        this.rawText = rawText.trim();
+        onlyDisplacement = !rawText.contains("(") && !rawText.contains(")");
+
+        if (rawText.contains("(") != rawText.contains(")")) {
+            throw new IllegalArgumentException("Mismatched parentheses in memory operand: " + rawText);
+        }
+    }
+
+    /**
+     * Calculates the displacement value for a memory operand
+     *
+     * @param text the text of the operand, excluding the brackets.
+     * @param labelManager the manager responsible for storing labels
+     * @return the computed displacement value
+     */
+    public long calculateDisplacement(String text, LabelManager labelManager) {
+        if (text.isBlank()) {
+            return 0;
+        }
+        try {
+            return Long.decode(text);
+        } catch (NumberFormatException e) {
+            if (labelManager.isDataLabel(text)) {
+                return labelManager.getDataLabel(text).address();
+            } else if (labelManager.isCodeLabel(text)) {
+                return labelManager.getCodeLabel(text);
+            } else {
+                throw new IllegalArgumentException(
+                        "Displacement '" + text + "' is not a valid number or label"
+                );
+            }
+        }
+    }
+
+    /**
+     * Helper method to calculate the address of the memory operand
+     *
+     * @param state the current CPU state
+     * @param labelManager the label manager
+     * @return the address of the memory operand
+     */
+    private long calculateAddress(CPUState state, LabelManager labelManager) {
+        long address;
+        if (onlyDisplacement) {
+            address = calculateDisplacement(rawText, labelManager);
+        } else {
+            String displacementStr = rawText.substring(0, rawText.indexOf("("));
+            long displacement = calculateDisplacement(displacementStr, labelManager);
+            String[] parts = openParentheses();
+
+            long base = parts[0].isBlank() ? 0 :
+                    new RegisterOperand(parts[0].trim()).getValue(state, labelManager, null);
+
+            long index = 0;
+            int scale = 1;
+
+            if (parts.length >= 2 && !parts[1].isBlank()) {
+                index = new RegisterOperand(parts[1].trim())
+                        .getValue(state, labelManager, null);
+            }
+
+            if (parts.length == 3) {
+                try {
+                    scale = Integer.decode(parts[2].trim());
+                    if (!acceptedScales.contains(scale)) {
+                        throw new IllegalArgumentException(
+                                "Invalid scale factor " + scale + ". Must be 1, 2, 4, or 8"
+                        );
+                    }
+                } catch (NumberFormatException e) {
+                    throw new IllegalArgumentException(
+                            "Scale '" + parts[2] + "' is not a valid number"
+                    );
+                }
+            }
+
+            address = base + displacement + (index * scale);
+        }
+        return address;
+    }
+
+    /**
+     * Helper method to get the strings inside the parentheses of the operand
+     *
+     * @return an array of strings inside the parentheses
+     */
+    private String[] openParentheses() {
+        String parensContent = rawText.substring(
+                rawText.indexOf("(") + 1,
+                rawText.indexOf(")")
+        );
+        String[] parts = parensContent.split(",", -1);
+
+        if (parts.length > 3) {
+            throw new IllegalArgumentException(
+                    "Invalid memory operand format: " + rawText + ". " +
+                            "The maximum number of arguments inside brackets is 3."
+            );
+        }
+        return parts;
+    }
+
+    @Override
+    public long getValue(CPUState state, LabelManager labelManager, Size operationSize) {
+        long address = calculateAddress(state, labelManager);
+        return state.getMemory().readN(address, operationSize.getBytes());
+    }
+
+    @Override
+    public void setValue(CPUState state, LabelManager labelManager, long value, Size operationSize) {
+        long address = calculateAddress(state, labelManager);
+        state.getMemory().writeN(address, value, operationSize.getBytes());
+    }
 }
