@@ -9,6 +9,7 @@ public class RegisterOperand implements Operand {
     private final RegisterInfo register;
 
     public RegisterOperand(String registerName) {
+        if (!registerName.contains("%")) throw new IllegalArgumentException("Invalid register name: " + registerName);
         try {
             this.register = RegisterInfo.valueOf(registerName.trim().replace("%", "").toUpperCase());
         } catch (Exception e) {

@@ -25,13 +25,13 @@ class RegisterOperandTest {
     @Test
     void wrongRegisterNameTest() {
         assertThrows(IllegalArgumentException.class, () -> {
-            RegisterOperand ro = new RegisterOperand("abc");
+            RegisterOperand ro = new RegisterOperand("%abc");
         });
     }
 
     @Test
     void sizeMismatchTest() {
-        RegisterOperand ro = new RegisterOperand("rax");
+        RegisterOperand ro = new RegisterOperand("%rax");
         assertThrows(IllegalArgumentException.class, () -> {
             ro.getValue(state, labelManager, Size.LONG);
         });
@@ -39,22 +39,22 @@ class RegisterOperandTest {
 
     @Test
     void getValueTest() {
-        RegisterOperand ro = new RegisterOperand("rax");
+        RegisterOperand ro = new RegisterOperand("%rax");
         long value = ro.getValue(state, labelManager, Size.QUAD);
         assertEquals(0x1000, value);
 
-        RegisterOperand ro2 = new RegisterOperand("al");
+        RegisterOperand ro2 = new RegisterOperand("%al");
         value = ro2.getValue(state, labelManager, Size.BYTE);
         assertEquals(0, value);
     }
 
     @Test
     void setValueTest() {
-        RegisterOperand ro = new RegisterOperand("rax");
+        RegisterOperand ro = new RegisterOperand("%rax");
         ro.setValue(state, labelManager, 0x2000, Size.QUAD);
         assertEquals(0x2000, state.getRegister("rax", 8));
 
-        RegisterOperand ro2 = new RegisterOperand("al");
+        RegisterOperand ro2 = new RegisterOperand("%al");
         ro2.setValue(state, labelManager, 0x10, Size.BYTE);
         assertEquals(0x2010, state.getRegister("rax", 8));
     }

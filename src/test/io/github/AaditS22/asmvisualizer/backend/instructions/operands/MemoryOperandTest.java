@@ -2,6 +2,7 @@ package io.github.AaditS22.asmvisualizer.backend.instructions.operands;
 
 import io.github.AaditS22.asmvisualizer.backend.cpu.CPUState;
 import io.github.AaditS22.asmvisualizer.backend.cpu.LabelManager;
+import io.github.AaditS22.asmvisualizer.backend.util.MemoryLayout;
 import io.github.AaditS22.asmvisualizer.backend.util.Size;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -36,6 +37,7 @@ class MemoryOperandTest {
         state.getMemory().writeQuad(0x3000, 0x5555555555555555L);
         state.getMemory().writeQuad(0x4000, 0xAAAAAAAAAAAAAAAAL);
         state.getMemory().writeQuad(0x4008, 0xBBBBBBBBBBBBBBBBL);
+        state.getMemory().writeQuad(3 + MemoryLayout.CODE_BASE, 0x9999999999999999L);
     }
 
     @Test
@@ -235,5 +237,25 @@ class MemoryOperandTest {
 
         MemoryOperand longOp = new MemoryOperand("0x6003");
         assertEquals(0x12345678L, longOp.getValue(state, labelManager, Size.LONG));
+    }
+
+    @Test
+    public void testRIPAddressing() {
+        MemoryOperand operand = new MemoryOperand("my_var(%rip)");
+        assertEquals(0x5555555555555555L, operand.getValue(state, labelManager, Size.QUAD));
+        MemoryOperand operand2 = new MemoryOperand("3(%rip)");
+        assertEquals(0x9999999999999999L, operand2.getValue(state, labelManager, Size.QUAD));
+    }
+
+    @Test
+    public void testRIPExceptions() {
+        MemoryOperand operand = new MemoryOperand("my_var(%rip, %abc)");
+        assertThrows(IllegalArgumentException.class, () -> {
+            operand.getValue(state, labelManager, Size.QUAD);
+        });
+        MemoryOperand operand2 = new MemoryOperand("4(%rax, %rip, 2)");
+        assertThrows(IllegalArgumentException.class, () -> {
+            operand2.getValue(state, labelManager, Size.QUAD);
+        });
     }
 }

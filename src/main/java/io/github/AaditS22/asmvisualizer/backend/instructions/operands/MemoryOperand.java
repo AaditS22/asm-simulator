@@ -63,7 +63,18 @@ public class MemoryOperand implements Operand {
             String displacementStr = rawText.substring(0, rawText.indexOf("("));
             long displacement = calculateDisplacement(displacementStr, labelManager);
             String[] parts = openParentheses();
-
+            if (parts[0].trim().equalsIgnoreCase("%rip")) {
+                if (parts.length != 1) {
+                    throw new IllegalArgumentException("%rip can only be used with no index or scale factor");
+                }
+                try {
+                    // If this works, do %rip + number, otherwise use only the label's address as address
+                    long val = Long.decode(displacementStr);
+                    return val + state.getRegister("rip", 8);
+                } catch (NumberFormatException e) {
+                    return displacement;
+                }
+            }
             long base = parts[0].isBlank() ? 0 :
                     new RegisterOperand(parts[0].trim()).getValue(state, labelManager, null);
 
@@ -71,6 +82,9 @@ public class MemoryOperand implements Operand {
             int scale = 1;
 
             if (parts.length >= 2 && !parts[1].isBlank()) {
+                if (parts[1].trim().equalsIgnoreCase("%rip")) {
+                    throw new IllegalArgumentException("Index cannot be %rip");
+                }
                 index = new RegisterOperand(parts[1].trim())
                         .getValue(state, labelManager, null);
             }
