@@ -6,7 +6,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class LabelManager {
-    private final Map<String, Integer> codeLabels;
+    private final Map<String, Long> codeLabels;
     private final Map<String, DataLabel> dataLabels;
 
     public LabelManager() {
@@ -46,13 +46,13 @@ public class LabelManager {
     /**
      * Adds a new codeLabel if it does not already exist
      * @param name the name of the label
-     * @param instructionNumber the instruction it corresponds to
+     * @param instructionAddress the address of the instruction it corresponds to
      */
-    public void addCodeLabel(String name, int instructionNumber) {
+    public void addCodeLabel(String name, long instructionAddress) {
         if (hasLabel(name)) {
             throw new IllegalArgumentException("The label: " + name + " already exists!");
         }
-        codeLabels.put(name, instructionNumber);
+        codeLabels.put(name, instructionAddress);
     }
 
     /**
@@ -71,11 +71,11 @@ public class LabelManager {
     /**
      * Gets the value stored at a code label if it exists
      * @param name the name of the label
-     * @return an integer corresponding to the instruction at the label
+     * @return a long corresponding to the address of the instruction at the label
      */
-    public int getCodeLabel(String name) {
+    public long getCodeLabel(String name) {
         if (!isCodeLabel(name)) {
-            throw new IllegalArgumentException("The label: " + name + " does not exist!");
+            throw new IllegalArgumentException("The label '" + name + "' does not exist!");
         }
         return codeLabels.get(name);
     }

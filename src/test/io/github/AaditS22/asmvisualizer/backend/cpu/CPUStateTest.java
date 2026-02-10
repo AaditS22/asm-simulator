@@ -1,5 +1,6 @@
 package io.github.AaditS22.asmvisualizer.backend.cpu;
 
+import io.github.AaditS22.asmvisualizer.backend.util.MemoryLayout;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -34,11 +35,11 @@ class CPUStateTest {
 
     @Test
     void programCounterTest() {
-        assertEquals(0, cpuState.getPC());
+        assertEquals(MemoryLayout.CODE_BASE, cpuState.getPC());
         cpuState.nextInstruction();
-        assertEquals(1, cpuState.getPC());
-        cpuState.setPC(5);
-        assertEquals(5, cpuState.getPC());
+        assertEquals(MemoryLayout.CODE_BASE + 8, cpuState.getPC());
+        cpuState.setPC(MemoryLayout.CODE_BASE + 64);
+        assertEquals(MemoryLayout.CODE_BASE + 64, cpuState.getPC());
     }
 
     @Test
@@ -49,7 +50,7 @@ class CPUStateTest {
         cpuState.getMemory().writeByte(0x100L, (byte) 50);
         cpuState.restartProgram();
         assertEquals(0L, cpuState.getRegister("rax", 8));
-        assertEquals(0, cpuState.getPC());
+        assertEquals(MemoryLayout.CODE_BASE, cpuState.getPC());
         assertFalse(cpuState.getFlags().isZero());
         assertEquals((byte) 0, cpuState.getMemory().readByte(0x100L));
     }
