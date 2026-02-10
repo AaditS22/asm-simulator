@@ -19,6 +19,8 @@ public class ImmediateOperand implements Operand {
             // Check if the label exists
             if (labelManager.isDataLabel(rawText)) {
                 return labelManager.getDataLabel(rawText).address();
+            } else if (labelManager.isCodeLabel(rawText)) {
+                return labelManager.getCodeLabel(rawText);
             } else {
                 throw new IllegalArgumentException("Immediate value is not a number or label: " + rawText);
             }

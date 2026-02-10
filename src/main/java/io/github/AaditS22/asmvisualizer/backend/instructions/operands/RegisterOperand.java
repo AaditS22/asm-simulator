@@ -19,7 +19,7 @@ public class RegisterOperand implements Operand {
     @Override
     public long getValue(CPUState state, LabelManager labelManager, Size operationSize) {
         // Check if there is a size mismatch between register size and operation
-        if (register.getNumBytes() != operationSize.getBytes()) {
+        if (operationSize != null && register.getNumBytes() != operationSize.getBytes()) {
             throw new IllegalArgumentException("The register: " + register.name() +
                     " is not the correct size for this operation!");
         }
