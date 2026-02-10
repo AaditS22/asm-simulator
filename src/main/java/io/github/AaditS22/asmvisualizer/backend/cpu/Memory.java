@@ -188,5 +188,6 @@ public class Memory {
      */
     public void clearMemory() {
         data.clear();
+        stackViewStart = 0x7FFFFFFFF000L;
     }
 }
