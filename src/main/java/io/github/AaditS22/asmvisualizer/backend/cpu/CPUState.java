@@ -85,6 +85,12 @@ public class CPUState {
         if (key.equals("rip")) {
             throw new IllegalArgumentException("%rip is read-only!");
         }
+        // Zero extend for mov long instructions
+        if (bytes == 4) {
+            long m = mask(bytes);
+            registers.put(key, value & m);
+            return;
+        }
         long oldFull = registers.get(key);
         long m = mask(bytes);
         long newValue = (oldFull & ~m) | (value & m);
