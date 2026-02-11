@@ -1,5 +1,7 @@
 package io.github.AaditS22.asmvisualizer.backend.cpu;
 
+import io.github.AaditS22.asmvisualizer.backend.util.MemoryLayout;
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -7,7 +9,6 @@ public class CPUState {
     private final Memory memory;
     private final Flags flags;
     private Map<String, Long> registers;
-    private int programCounter;
 
     /**
      * Helper method to initialize all important registers
@@ -22,6 +23,7 @@ public class CPUState {
         registers.put("rbp", 0x7FFFFFFFF000L);
         registers.put("rsi", 0L);
         registers.put("rdi", 0L);
+        registers.put("rip", MemoryLayout.CODE_BASE);
         for (int i = 8; i < 16; i++) {
             registers.put("r" + i, 0L);
         }
@@ -32,7 +34,6 @@ public class CPUState {
      */
     public CPUState() {
         initializeRegisters();
-        programCounter = 0;
         memory = new Memory(registers);
         flags = new Flags();
     }
@@ -81,6 +82,9 @@ public class CPUState {
      */
     public void setRegister(String registerName, int bytes, long value) {
         String key = registerName.toLowerCase();
+        if (key.equals("rip")) {
+            throw new IllegalArgumentException("%rip is read-only!");
+        }
         long oldFull = registers.get(key);
         long m = mask(bytes);
         long newValue = (oldFull & ~m) | (value & m);
@@ -88,33 +92,32 @@ public class CPUState {
     }
 
     /**
-     * Sets the PC to a specific value (used in jumps)
-     * @param programCounter the value to set it to
+     * Sets the program counter (%rip) to a specific value (used in jumps)
+     * @param address the address of the instruction to jump to
      */
-    public void setPC(int programCounter) {
-        this.programCounter = programCounter;
+    public void setPC(long address) {
+        registers.put("rip", address);
     }
 
     /**
-     * Getter for the current value of the program counter
-     * @return the current value of the PC
+     * Getter for the current value of the program counter (%rip)
+     * @return the current value of the PC as an instruction address
      */
-    public int getPC() {
-        return programCounter;
+    public long getPC() {
+        return registers.get("rip");
     }
 
     /**
-     * Increments the PC by 1 to move to the next instruction
+     * Increments the PC by 8 to move to the next instruction
      */
     public void nextInstruction() {
-        programCounter++;
+        registers.put("rip", registers.get("rip") + MemoryLayout.INSTRUCTION_SIZE);
     }
 
     /**
      * Fully restarts the program, bringing CPUState back to its original config
      */
     public void restartProgram() {
-        programCounter = 0;
         initializeRegisters();
         memory.clearMemory();
         flags.resetFlags();
