@@ -2,6 +2,10 @@ package io.github.AaditS22.asmvisualizer.backend.instructions;
 
 import io.github.AaditS22.asmvisualizer.backend.cpu.CPUState;
 import io.github.AaditS22.asmvisualizer.backend.cpu.LabelManager;
+import io.github.AaditS22.asmvisualizer.backend.instructions.arithmetic.AddInstruction;
+import io.github.AaditS22.asmvisualizer.backend.instructions.arithmetic.DecInstruction;
+import io.github.AaditS22.asmvisualizer.backend.instructions.arithmetic.IncInstruction;
+import io.github.AaditS22.asmvisualizer.backend.instructions.arithmetic.SubInstruction;
 import io.github.AaditS22.asmvisualizer.backend.instructions.movement.*;
 import io.github.AaditS22.asmvisualizer.backend.instructions.operands.*;
 import io.github.AaditS22.asmvisualizer.backend.util.MemoryLayout;
@@ -13,7 +17,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-// Disclaimer: The following tests were written by an LLM
+// Disclaimer: Some of the following tests were written by LLMs
 
 class InstructionTest {
     private CPUState state;
@@ -326,6 +330,117 @@ class InstructionTest {
                         new MemoryOperand("0x5000")
                 ))
         );
+    }
+
+    // ==================== ADD/SUB Tests ====================
+    @Test
+    void addRegistersTest() {
+        state.setRegister("rax", 8, 10L);
+        state.setRegister("rbx", 8, 20L);
+        Instruction add = new AddInstruction("addq", Size.QUAD, List.of(
+                new RegisterOperand("%rax"),
+                new RegisterOperand("%rbx")
+        ));
+        add.execute(state, labelManager);
+        assertEquals(30L, state.getRegister("rbx", 8));
+    }
+
+    @Test
+    void subRegistersTest() {
+        state.setRegister("rax", 8, 10L);
+        state.setRegister("rbx", 8, 20L);
+        Instruction sub = new SubInstruction("subq", Size.QUAD, List.of(
+                new RegisterOperand("%rax"),
+                new RegisterOperand("%rbx")
+        ));
+        sub.execute(state, labelManager);
+        assertEquals(10L, state.getRegister("rbx", 8));
+    }
+
+    @Test
+    void addMemoryToRegisterTest() {
+        state.setRegister("rax", 8, 10L);
+        state.getMemory().writeQuad(0x5000L, 20L);
+        Instruction add = new AddInstruction("addq", Size.QUAD, List.of(
+                new MemoryOperand("0x5000"),
+                new RegisterOperand("%rax")
+        ));
+        add.execute(state, labelManager);
+        assertEquals(30L, state.getRegister("rax", 8));
+    }
+
+    @Test
+    void addRegisterToMemoryTest() {
+        state.getMemory().writeQuad(0x5000L, 10L);
+        state.setRegister("rax", 8, 20L);
+        Instruction add = new AddInstruction("addq", Size.QUAD, List.of(
+                new RegisterOperand("%rax"),
+                new MemoryOperand("0x5000")
+        ));
+        add.execute(state, labelManager);
+        assertEquals(30L, state.getMemory().readQuad(0x5000L));
+    }
+
+    @Test
+    void addDescriptionTest() {
+        state.getMemory().writeQuad(0x5000L, 10L);
+        state.setRegister("rax", 8, 20L);
+        Instruction add = new AddInstruction("addq", Size.QUAD, List.of(
+                new RegisterOperand("%rax"),
+                new MemoryOperand("0x5000")
+        ));
+        assertTrue(add.getDescription(state, labelManager).contains("Adds"));
+    }
+
+    @Test
+    void subDescriptionTest() {
+        state.getMemory().writeQuad(0x5000L, 10L);
+        state.setRegister("rax", 8, 20L);
+        Instruction sub = new SubInstruction("subq", Size.QUAD, List.of(
+                new RegisterOperand("%rax"),
+                new MemoryOperand("0x5000")
+        ));
+        assertTrue(sub.getDescription(state, labelManager).contains("Subtracts"));
+    }
+
+    // ==================== INC/DEC Tests =========================
+
+    @Test
+    void incRegisterTest() {
+        state.setRegister("rax", 8, 10L);
+        Instruction inc = new IncInstruction("incq", Size.QUAD, List.of(
+                new RegisterOperand("%rax")
+        ));
+        inc.execute(state, labelManager);
+        assertEquals(11L, state.getRegister("rax", 8));
+    }
+
+    @Test
+    void decRegisterTest() {
+        state.setRegister("rax", 8, 10L);
+        Instruction dec = new DecInstruction("decq", Size.QUAD, List.of(
+                new RegisterOperand("%rax")
+        ));
+        dec.execute(state, labelManager);
+        assertEquals(9L, state.getRegister("rax", 8));
+    }
+
+    @Test
+    void incDescriptionTest() {
+        state.setRegister("rax", 8, 10L);
+        Instruction inc = new IncInstruction("incq", Size.QUAD, List.of(
+                new RegisterOperand("%rax")
+        ));
+        assertTrue(inc.getDescription(state, labelManager).contains("Increments"));
+    }
+
+    @Test
+    void decDescriptionTest() {
+        state.setRegister("rax", 8, 10L);
+        Instruction dec = new DecInstruction("decq", Size.QUAD, List.of(
+                new RegisterOperand("%rax")
+        ));
+        assertTrue(dec.getDescription(state, labelManager).contains("Decrements"));
     }
 
     // ==================== Combined Simulation Tests ====================
