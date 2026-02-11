@@ -39,6 +39,20 @@ public class RegisterOperand implements Operand {
         state.setRegister(register.getBaseRegister(), register.getNumBytes(), value);
     }
 
+    /**
+     * Gets the size of this register operand
+     * @return the Size enum corresponding to this register's byte width
+     */
+    public Size getSize() {
+        return switch (register.getNumBytes()) {
+            case 1 -> Size.BYTE;
+            case 2 -> Size.WORD;
+            case 4 -> Size.LONG;
+            case 8 -> Size.QUAD;
+            default -> throw new IllegalStateException("Unknown register size: " + register.getNumBytes());
+        };
+    }
+
     @Override
     public String getDescription(CPUState state, LabelManager labelManager) {
         long value = state.getRegister(register.getBaseRegister(), register.getNumBytes());
