@@ -30,7 +30,7 @@ class CPUStateTest {
         assertEquals(0xEFEFL, cpuState.getRegister("rax", 2));
         assertEquals(0xABCDABCDABCDEFEFL, cpuState.getRegister("rax", 8));
         cpuState.setRegister("rax", 4, 0xEFEFL);
-        assertEquals(0xABCDABCD0000EFEFL, cpuState.getRegister("rax", 8));
+        assertEquals(0xEFEFL, cpuState.getRegister("rax", 8));
     }
 
     @Test

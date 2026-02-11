@@ -24,4 +24,19 @@ public interface Operand {
      * @param operationSize the size of the operation, as a Size enum
      */
     void setValue(CPUState state, LabelManager labelManager, long value, Size operationSize);
+
+    /**
+     * Returns a detailed, human-readable description of this operand.
+     *
+     * @param state the current state of the CPU, including registers, memory, and flags
+     * @param labelManager the label manager containing information about code and data labels
+     * @return a human-readable description of this operand
+     */
+    String getDescription(CPUState state, LabelManager labelManager);
+
+    /**
+     * Returns the assembly syntax representation.
+     * @return the assembly syntax representation of this operand
+     */
+    String toAssemblyString();
 }

@@ -51,4 +51,20 @@ class ImmediateOperandTest {
         ImmediateOperand io2 = new ImmediateOperand("$array_start");
         assertEquals(0x4000, io2.getValue(state, labelManager, null));
     }
+
+    @Test
+    void toAssemblyStringTest() {
+        assertEquals("$100", new ImmediateOperand("$100").toAssemblyString());
+        assertEquals("$0x20", new ImmediateOperand("$0x20").toAssemblyString());
+        assertEquals("$my_var", new ImmediateOperand("$my_var").toAssemblyString());
+    }
+
+    @Test
+    void getDescriptionTest() {
+        ImmediateOperand io = new ImmediateOperand("$100");
+        assertEquals("immediate value $100 (100, 0x64)", io.getDescription(state, labelManager));
+
+        ImmediateOperand ioLabel = new ImmediateOperand("$my_var");
+        assertEquals("immediate value $my_var (12288, 0x3000)", ioLabel.getDescription(state, labelManager));
+    }
 }

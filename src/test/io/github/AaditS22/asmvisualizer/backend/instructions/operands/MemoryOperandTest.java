@@ -258,4 +258,62 @@ class MemoryOperandTest {
             operand2.getValue(state, labelManager, Size.QUAD);
         });
     }
+
+    @Test
+    public void testToAssemblyString() {
+        assertEquals("0x1000", new MemoryOperand("0x1000").toAssemblyString());
+        assertEquals("8(%rax,%rcx,4)", new MemoryOperand("8(%rax,%rcx,4)").toAssemblyString());
+    }
+
+    @Test
+    public void testGetDescriptionOnlyDisplacement() {
+        // Numeric displacement
+        MemoryOperand op1 = new MemoryOperand("0x1000");
+        assertEquals("memory at effective address 0x1000 (resolved as: displacement 0x1000)",
+                op1.getDescription(state, labelManager));
+
+        // Label displacement
+        MemoryOperand op2 = new MemoryOperand("my_var");
+        assertEquals("memory at effective address 0x3000 (resolved as: address of label my_var)",
+                op2.getDescription(state, labelManager));
+    }
+
+    @Test
+    public void testGetDescriptionComplexAddressing() {
+        // Base + Index + Scale + Displacement
+        // %rax=0x1000, %rcx=0x10. Address: 0x1000 + 0x10*4 + 8 = 0x1048
+        MemoryOperand op = new MemoryOperand("8(%rax,%rcx,4)");
+        String desc = op.getDescription(state, labelManager);
+
+        assertTrue(desc.contains("0x1048"));
+        assertTrue(desc.contains("displacement[8] + base[%rax] + (index[%rcx] * scale[4])"));
+    }
+
+    @Test
+    public void testGetDescriptionRIPRelative() {
+        // RIP-relative with label
+        MemoryOperand opLabel = new MemoryOperand("my_var(%rip)");
+        assertEquals("memory at effective address 0x3000 (resolved as: RIP-relative label my_var)",
+                opLabel.getDescription(state, labelManager));
+
+        // RIP-relative with raw offset
+        MemoryOperand opRaw = new MemoryOperand("3(%rip)");
+        String desc = opRaw.getDescription(state, labelManager);
+        assertTrue(desc.contains("resolved as: %rip + 3"));
+    }
+
+    @Test
+    public void testGetDescriptionBaseOnly() {
+        // Just (%rax) -> Address 0x1000
+        MemoryOperand op = new MemoryOperand("(%rax)");
+        assertEquals("memory at effective address 0x1000 (resolved as: displacement[0] + base[%rax])",
+                op.getDescription(state, labelManager));
+    }
+
+    @Test
+    public void testGetDescriptionBaseIndexDisplacement() {
+        MemoryOperand op = new MemoryOperand("2(%rax,%rcx)");
+        assertTrue(op.getDescription(state, labelManager)
+                .contains("resolved as: displacement[2] + base[%rax] + (index[%rcx] * scale[1])"));
+    }
 }
