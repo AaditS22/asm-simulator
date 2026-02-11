@@ -55,7 +55,7 @@ public class MemoryOperand implements Operand {
      * @param labelManager the label manager
      * @return the address of the memory operand
      */
-    private long calculateAddress(CPUState state, LabelManager labelManager) {
+    public long calculateAddress(CPUState state, LabelManager labelManager) {
         long address;
         if (onlyDisplacement) {
             address = calculateDisplacement(rawText, labelManager);
@@ -140,5 +140,66 @@ public class MemoryOperand implements Operand {
     public void setValue(CPUState state, LabelManager labelManager, long value, Size operationSize) {
         long address = calculateAddress(state, labelManager);
         state.getMemory().writeN(address, value, operationSize.getBytes());
+    }
+
+    @Override
+    public String getDescription(CPUState state, LabelManager labelManager) {
+        long address = calculateAddress(state, labelManager);
+        return String.format("memory at address 0x%X (effective address = %s)",
+                address, getCalculationFormula(labelManager));
+    }
+
+    /**
+     * Generates the calculation formula for a memory operand based on its raw text
+     *
+     * @param labelManager the label manager used to resolve labels
+     * @return a string representing the calculation formula for the memory operand
+     */
+    private String getCalculationFormula(LabelManager labelManager) {
+        if (onlyDisplacement) {
+            return labelManager.hasLabel(rawText) ? "address of label " + rawText : "displacement " + rawText;
+        }
+
+        String dispStr = rawText.substring(0, rawText.indexOf("("));
+        String[] parts = openParentheses();
+
+        if (parts[0].trim().equalsIgnoreCase("%rip")) {
+            return (labelManager.hasLabel(dispStr))
+                    ? "RIP-relative label " + dispStr
+                    : "%rip + " + (dispStr.isBlank() ? "0" : dispStr);
+        }
+
+        StringBuilder formula = new StringBuilder();
+
+        if (!dispStr.isBlank()) {
+            formula.append("displacement[").append(dispStr).append("]");
+        } else {
+            formula.append("displacement[0]");
+        }
+        formula.append(" + ");
+
+        String base = parts[0].trim();
+        if (!base.isBlank()) {
+            formula.append("base[").append(base).append("]");
+        } else {
+            formula.append("base[0]");
+        }
+
+        if (parts.length >= 2 && !parts[1].isBlank()) {
+            formula.append(" + (");
+            formula.append("index[").append(parts[1].trim()).append("]");
+            if (parts.length == 3 && !parts[2].isBlank()) {
+                formula.append(" * ").append("scale[").append(parts[2].trim()).append("])");
+            } else {
+                formula.append(" * scale[1])");
+            }
+        }
+
+        return formula.toString();
+    }
+
+    @Override
+    public String toAssemblyString() {
+        return rawText;
     }
 }

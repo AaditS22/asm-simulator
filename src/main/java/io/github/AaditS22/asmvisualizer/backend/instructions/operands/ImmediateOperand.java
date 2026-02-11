@@ -31,4 +31,15 @@ public class ImmediateOperand implements Operand {
     public void setValue(CPUState state, LabelManager labelManager, long value, Size operationSize) {
         throw new UnsupportedOperationException("Cannot set value of immediate operand!");
     }
+
+    @Override
+    public String getDescription(CPUState state, LabelManager labelManager) {
+        long value = getValue(state, labelManager, null);
+        return String.format("immediate value $%s (%d, 0x%X)", rawText, value, value);
+    }
+
+    @Override
+    public String toAssemblyString() {
+        return String.format("$%s", rawText);
+    }
 }

@@ -58,4 +58,20 @@ class RegisterOperandTest {
         ro2.setValue(state, labelManager, 0x10, Size.BYTE);
         assertEquals(0x2010, state.getRegister("rax", 8));
     }
+
+    @Test
+    void toAssemblyStringTest() {
+        assertEquals("%rax", new RegisterOperand("%rax").toAssemblyString());
+        assertEquals("%al", new RegisterOperand("%al").toAssemblyString());
+        assertEquals("%r15", new RegisterOperand("%r15").toAssemblyString());
+    }
+
+    @Test
+    void getDescriptionTest() {
+        RegisterOperand ro = new RegisterOperand("%rax");
+        String desc = ro.getDescription(state, labelManager);
+        assertTrue(desc.contains("%rax"));
+        assertTrue(desc.contains("4096"));
+        assertTrue(desc.contains("0x1000"));
+    }
 }

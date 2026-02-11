@@ -38,4 +38,16 @@ public class RegisterOperand implements Operand {
         }
         state.setRegister(register.getBaseRegister(), register.getNumBytes(), value);
     }
+
+    @Override
+    public String getDescription(CPUState state, LabelManager labelManager) {
+        long value = state.getRegister(register.getBaseRegister(), register.getNumBytes());
+        return String.format("register %%%s [current value: %d (0x%X)]",
+                register.name().toLowerCase(), value, value);
+    }
+
+    @Override
+    public String toAssemblyString() {
+        return "%" + register.name().toLowerCase();
+    }
 }
