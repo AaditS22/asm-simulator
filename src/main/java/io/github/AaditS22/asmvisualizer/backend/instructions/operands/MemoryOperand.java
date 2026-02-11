@@ -145,7 +145,7 @@ public class MemoryOperand implements Operand {
     @Override
     public String getDescription(CPUState state, LabelManager labelManager) {
         long address = calculateAddress(state, labelManager);
-        return String.format("memory at address 0x%X (effective address = %s)",
+        return String.format("memory at effective address 0x%X (resolved as: %s)",
                 address, getCalculationFormula(labelManager));
     }
 
