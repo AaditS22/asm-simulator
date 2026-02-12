@@ -1,4 +1,4 @@
-# Assembly x86-64 Visualizer
+# Assembly x86-64 Simulator
 
 ---
 
