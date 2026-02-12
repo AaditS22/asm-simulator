@@ -1,2 +1,2 @@
-# asm-visualizer
+# asm-simulator
 An application to visualize and debug Assembly x86-64 AT&amp;T code
