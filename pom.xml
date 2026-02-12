@@ -68,7 +68,7 @@
                 <artifactId>javafx-maven-plugin</artifactId>
                 <version>0.0.8</version>
                 <configuration>
-                    <mainClass>io.github.AaditS22.asmvisualizer.MainApp</mainClass>
+                    <mainClass>io.github.AaditS22.asmsimulator.MainApp</mainClass>
                 </configuration>
             </plugin>
         </plugins>
