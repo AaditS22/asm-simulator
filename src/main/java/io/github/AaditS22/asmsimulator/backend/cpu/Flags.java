@@ -130,6 +130,61 @@ public class Flags {
     }
 
     /**
+     * Updates flags after a left shift operation
+     * @param operand the original value before shifting
+     * @param count the shift count
+     * @param numBits the number of bits in the operation
+     */
+    public void updateShlFlags(long operand, long count, int numBits) {
+        long mask = (numBits == 64) ? -1L : (1L << numBits) - 1;
+        long signMask = 1L << (numBits - 1);
+
+        if (count == 0) return;
+
+        long result = (operand << count) & mask;
+        zeroFlag = (result == 0);
+        signFlag = (result & signMask) != 0;
+
+        if (count <= numBits) {
+            carryFlag = ((operand >> (numBits - count)) & 1) != 0;
+        } else {
+            carryFlag = false;
+        }
+
+        if (count == 1) {
+            overflowFlag = ((result & signMask) != 0) != ((operand & signMask) != 0);
+        }
+    }
+
+    /**
+     * Updates flags after a logical right shift operation
+     * @param operand the original value before shifting
+     * @param count the shift count
+     * @param numBits the number of bits in the operation
+     */
+    public void updateShrFlags(long operand, long count, int numBits) {
+        long mask = (numBits == 64) ? -1L : (1L << numBits) - 1;
+        long signMask = 1L << (numBits - 1);
+
+        if (count == 0) return;
+
+        long maskedOperand = operand & mask;
+        long result = (maskedOperand >>> count) & mask;
+        zeroFlag = (result == 0);
+        signFlag = (result & signMask) != 0;
+
+        if (count <= numBits) {
+            carryFlag = ((maskedOperand >> (count - 1)) & 1) != 0;
+        } else {
+            carryFlag = false;
+        }
+
+        if (count == 1) {
+            overflowFlag = (maskedOperand & signMask) != 0;
+        }
+    }
+
+    /**
      * Resets all flags back to false
      */
     public void resetFlags() {
