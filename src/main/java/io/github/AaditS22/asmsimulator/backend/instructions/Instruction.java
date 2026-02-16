@@ -2,7 +2,11 @@ package io.github.AaditS22.asmsimulator.backend.instructions;
 
 import io.github.AaditS22.asmsimulator.backend.cpu.CPUState;
 import io.github.AaditS22.asmsimulator.backend.cpu.LabelManager;
+import io.github.AaditS22.asmsimulator.backend.instructions.movement.MovzbInstruction;
+import io.github.AaditS22.asmsimulator.backend.instructions.movement.MovzwInstruction;
+import io.github.AaditS22.asmsimulator.backend.instructions.operands.MemoryOperand;
 import io.github.AaditS22.asmsimulator.backend.instructions.operands.Operand;
+import io.github.AaditS22.asmsimulator.backend.instructions.operands.RegisterOperand;
 import io.github.AaditS22.asmsimulator.backend.util.Size;
 
 import java.util.List;
@@ -16,6 +20,18 @@ public abstract class Instruction {
         this.mnemonic = mnemonic;
         this.size = size;
         this.operands = operands;
+        if (operands.size() == 2) {
+            if (operands.get(0) instanceof MemoryOperand && operands.get(1) instanceof MemoryOperand) {
+                throw new IllegalArgumentException("Instructions cannot have two memory operands");
+            }
+        }
+        if (!(this instanceof MovzbInstruction) && !(this instanceof MovzwInstruction)) {
+            for (Operand operand : operands) {
+                if (operand instanceof RegisterOperand registerOperand) {
+                    registerOperand.validateSize(size);
+                }
+            }
+        }
     }
 
     /**

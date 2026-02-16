@@ -53,6 +53,17 @@ public class RegisterOperand implements Operand {
         };
     }
 
+    /**
+     * Helper method to validate the size of a register operand
+     * @param instructionSize the size of the instruction
+     */
+    public void validateSize(Size instructionSize) {
+        if (instructionSize != null && register.getNumBytes() != instructionSize.getBytes()) {
+            throw new IllegalArgumentException("%" + register.name().toLowerCase()
+                    + " is not the correct size for a " + instructionSize + " operation");
+        }
+    }
+
     @Override
     public String getDescription(CPUState state, LabelManager labelManager) {
         long value = state.getRegister(register.getBaseRegister(), register.getNumBytes());
