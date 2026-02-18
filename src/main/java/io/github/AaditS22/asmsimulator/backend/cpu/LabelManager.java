@@ -92,4 +92,11 @@ public class LabelManager {
         return dataLabels.get(name);
     }
 
+    /**
+     * Resets the label manager by clearing all stored labels.
+     */
+    public void reset() {
+        codeLabels.clear();
+        dataLabels.clear();
+    }
 }

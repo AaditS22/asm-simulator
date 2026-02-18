@@ -10,5 +10,11 @@ public class MemoryLayout {
     public static final long BSS_BASE     = 0x602000L;
     public static final long HEAP_BASE    = 0x603000L;
     public static final long STACK_BASE   = 0x7FFFFFFFF000L;
+
+    public static final long CODE_LIMIT           = READ_ONLY_DATA_BASE;
+    public static final long READ_ONLY_DATA_LIMIT = DATA_BASE;
+    public static final long DATA_LIMIT           = BSS_BASE;
+    public static final long BSS_LIMIT            = HEAP_BASE;
+
     public static final int INSTRUCTION_SIZE = 8;
 }
