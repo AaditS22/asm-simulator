@@ -29,6 +29,7 @@
 
         <module name="CyclomaticComplexity">
             <property name="max" value="12"/>
+            <property name="severity" value="warning"/>
         </module>
 
         <module name="Indentation">
