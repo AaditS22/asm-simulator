@@ -11,15 +11,21 @@ import io.github.AaditS22.asmsimulator.backend.util.Size;
 import java.util.List;
 
 public class ConditionalJumpInstruction extends Instruction {
+    private static final List<String> SUPPORTED_CONDITIONS = List.of("e", "ne", "g", "ge", "l", "le");
     private final String condition;
+
     public ConditionalJumpInstruction(String mnemonic, Size size, List<Operand> operands) {
         super(mnemonic, size, operands);
         validateOperandCount(1);
 
         if (mnemonic.trim().length() >= 2) {
             condition = mnemonic.trim().toLowerCase().substring(1);
+            if (!SUPPORTED_CONDITIONS.contains(condition)) {
+                throw new IllegalArgumentException("The jump condition: " + condition + " is either " +
+                        "not supported yet or is invalid");
+            }
         } else {
-            condition = null;
+            throw new IllegalArgumentException("Invalid mnemonic for conditional jump instruction");
         }
 
         if (!(operands.get(0) instanceof LabelOperand)) {
