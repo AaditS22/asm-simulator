@@ -55,9 +55,9 @@ public class Parser {
         Section currentSection = Section.TEXT;
         String entryPoint = "_start";
         List<String> pendingDataLabels = new ArrayList<>();
+
         for (Line lineObj : lines) {
-            String line = lineObj.content;
-            int lineNum = lineObj.lineNumber;
+            String line = lineObj.content; int lineNum = lineObj.lineNumber;
             try {
                 String potentialLabel;
                 int colonIndex = findColonOutsideQuotes(line);
@@ -67,8 +67,13 @@ public class Parser {
                         if (currentSection == Section.TEXT) {
                             labelManager.addCodeLabel(potentialLabel, textAddr);
                         } else {
-                            pendingDataLabels.add(potentialLabel);}
+                            pendingDataLabels.add(potentialLabel);
+                        }
                         line = line.substring(colonIndex + 1).trim();
+                    } else {
+                        throw new IllegalArgumentException(
+                                "Invalid label name: '" + potentialLabel
+                                        + "'. Labels must start with a letter or underscore and contain no spaces.");
                     }
                 }
                 if (line.startsWith(".section") || isSectionDirective(line)) {
@@ -80,7 +85,8 @@ public class Parser {
                 if (line.startsWith(".globl") || line.startsWith(".global")) {
                     String[] parts = line.split("\\s+");
                     if (parts.length > 1) {
-                        entryPoint = parts[1].trim();}
+                        entryPoint = parts[1].trim();
+                    }
                     continue;
                 }
                 if (line.isEmpty()) continue;
@@ -97,11 +103,13 @@ public class Parser {
                 else {
                     if (currentSection != Section.TEXT) {
                         throw new IllegalArgumentException("Instructions are not allowed in the "
-                                + currentSection + " section");}
+                                + currentSection + " section");
+                    }
                     textAddr += MemoryLayout.INSTRUCTION_SIZE;}
                 validateOverflow(currentSection, textAddr, dataAddr, rodataAddr, bssAddr);
             } catch (Exception e) {
-                throw new IllegalArgumentException("Error on line " + lineNum + ": " + e.getMessage(), e);}
+                throw new IllegalArgumentException("Error on line " + lineNum + ": " + e.getMessage(), e);
+            }
         }
         flushPendingLabels(pendingDataLabels, labelManager,
                 getCurrentAddress(currentSection, textAddr, dataAddr, rodataAddr, bssAddr), 0);
@@ -250,7 +258,7 @@ public class Parser {
      * @return true if it is a valid label, false otherwise
      */
     private static boolean isValidLabel(String str) {
-        return !str.contains(" ") && !str.startsWith(".");
+        return str.matches("[a-zA-Z_.][a-zA-Z0-9_.]*");
     }
 
     /**

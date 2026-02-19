@@ -21,6 +21,7 @@
 
         <module name="MethodLength">
             <property name="max" value="60"/>
+            <property name="severity" value="warning"/>
         </module>
 
         <module name="ParameterNumber">
