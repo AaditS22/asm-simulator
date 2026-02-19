@@ -9,6 +9,7 @@ public class CPUState {
     private final Memory memory;
     private final Flags flags;
     private Map<String, Long> registers;
+    private final IOBuffer ioBuffer;
 
     /**
      * Helper method to initialize all important registers
@@ -36,6 +37,7 @@ public class CPUState {
         initializeRegisters();
         memory = new Memory(registers);
         flags = new Flags();
+        ioBuffer = new IOBuffer();
     }
 
     /**
@@ -61,6 +63,14 @@ public class CPUState {
      */
     public Flags getFlags() {
         return flags;
+    }
+
+    /**
+     * Getter for the IOBuffer object
+     * @return the saved IOBuffer object
+     */
+    public IOBuffer getIOBuffer() {
+        return ioBuffer;
     }
 
     /**
@@ -127,5 +137,6 @@ public class CPUState {
         initializeRegisters();
         memory.clearMemory();
         flags.resetFlags();
+        ioBuffer.reset();
     }
 }
