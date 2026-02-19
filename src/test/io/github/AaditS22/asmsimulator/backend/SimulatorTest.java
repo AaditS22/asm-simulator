@@ -1,6 +1,7 @@
 package io.github.AaditS22.asmsimulator.backend;
 
 import io.github.AaditS22.asmsimulator.backend.util.MemoryLayout;
+import io.github.AaditS22.asmsimulator.backend.util.StepResult;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -90,10 +91,10 @@ class SimulatorTest {
                     ret
                 """);
 
-        String description = sim.step();
+        StepResult result = sim.step();
 
-        assertNotNull(description);
-        assertFalse(description.isBlank());
+        assertNotNull(result.description());
+        assertFalse(result.description().isBlank());
         assertEquals(42L, sim.getState().getRegister("rax", 8));
         assertEquals(MemoryLayout.CODE_BASE + 8, sim.getState().getPC());
     }
@@ -106,10 +107,22 @@ class SimulatorTest {
                     movq $10, %rax
                     ret
                 """);
-        String description = sim.step();
-        assertNotNull(description);
-        // rax should have been updated
+        StepResult result = sim.step();
+        assertNotNull(result.description());
         assertEquals(10L, sim.getState().getRegister("rax", 8));
+    }
+
+    @Test
+    void stepOutputEmptyForNonIoInstruction() {
+        sim.load("""
+                .text
+                main:
+                    movq $1, %rax
+                    ret
+                """);
+        StepResult result = sim.step();
+        assertFalse(result.hasOutput());
+        assertEquals("", result.output());
     }
 
     @Test
@@ -148,10 +161,10 @@ class SimulatorTest {
                     idivq %rcx
                     ret
                 """);
-        sim.step(); // movq $0 → rcx
-        sim.step(); // movq $5 → rax
-        sim.step(); // movq $0 → rdx
-        assertThrows(Exception.class, () -> sim.step()); // idivq %rcx → divide by zero
+        sim.step();
+        sim.step();
+        sim.step();
+        assertThrows(Exception.class, () -> sim.step());
     }
 
     // ── runAll ───────────────────────────────────────────────────────────────
@@ -167,11 +180,24 @@ class SimulatorTest {
                     addq %rax, %rbx
                 """);
 
-        List<String> descriptions = sim.runAll(100);
+        List<StepResult> results = sim.runAll(100);
 
-        assertEquals(3, descriptions.size());
+        assertEquals(3, results.size());
         assertTrue(sim.isHalted());
         assertEquals(30L, sim.getState().getRegister("rbx", 8));
+    }
+
+    @Test
+    void runAllDescriptionsNonBlank() {
+        sim.load("""
+                .text
+                main:
+                    movq $1, %rax
+                    movq $2, %rbx
+                """);
+
+        List<StepResult> results = sim.runAll(100);
+        results.forEach(r -> assertFalse(r.description().isBlank()));
     }
 
     @Test
@@ -278,5 +304,158 @@ class SimulatorTest {
         sim.step();
         assertTrue(sim.isHalted());
         assertNull(sim.getCurrentInstruction());
+    }
+
+    // ── printf integration ───────────────────────────────────────────────────
+
+    @Test
+    void printfOutputCapturedInStepResult() {
+        sim.load("""
+                .rodata
+                fmt: .asciz "hello"
+                .text
+                .globl main
+                main:
+                    leaq fmt(%rip), %rdi
+                    call printf
+                    ret
+                """);
+
+        sim.step(); // leaq
+        StepResult result = sim.step(); // call printf
+
+        assertTrue(result.hasOutput());
+        assertEquals("hello", result.output());
+    }
+
+    @Test
+    void printfDoesNotCorruptRsp() {
+        sim.load("""
+                .rodata
+                fmt: .asciz "x"
+                .text
+                .globl main
+                main:
+                    leaq fmt(%rip), %rdi
+                    call printf
+                    ret
+                """);
+
+        long rspBefore = sim.getState().getRegister("rsp", 8);
+        sim.step(); // leaq
+        sim.step(); // call printf
+        long rspAfter = sim.getState().getRegister("rsp", 8);
+
+        assertEquals(rspBefore, rspAfter);
+    }
+
+    @Test
+    void printfOverwritesStackSlotDuringExecution() {
+        sim.load("""
+                .rodata
+                fmt: .asciz "x"
+                .text
+                .globl main
+                main:
+                    leaq fmt(%rip), %rdi
+                    call printf
+                    ret
+                """);
+
+        long rsp = sim.getState().getRegister("rsp", 8);
+        long sentinel = 0xDEADBEEFL;
+        sim.getState().getMemory().writeQuad(rsp - 8, sentinel);
+
+        sim.step(); // leaq — stack slot untouched
+        assertEquals(sentinel, sim.getState().getMemory().readQuad(rsp - 8));
+
+        sim.step(); // call printf — return address is pushed then popped
+        // After the call the slot should contain the return address that was pushed,
+        // not the sentinel — confirming the push occurred and overwrote it
+        long returnAddress = MemoryLayout.CODE_BASE + 2 * MemoryLayout.INSTRUCTION_SIZE;
+        assertEquals(returnAddress, sim.getState().getMemory().readQuad(rsp - 8));
+    }
+
+    @Test
+    void printfWithIntArgProducesCorrectOutput() {
+        sim.load("""
+                .rodata
+                fmt: .asciz "n=%d"
+                .text
+                .globl main
+                main:
+                    leaq fmt(%rip), %rdi
+                    movq $7, %rsi
+                    call printf
+                    ret
+                """);
+
+        sim.step(); // leaq
+        sim.step(); // movq
+        StepResult result = sim.step(); // call printf
+
+        assertEquals("n=7", result.output());
+    }
+
+    @Test
+    void nonPrintfCallHasNoOutput() {
+        sim.load("""
+                .text
+                .globl main
+                main:
+                    call func
+                    ret
+                func:
+                    movq $1, %rax
+                    ret
+                """);
+
+        StepResult result = sim.step(); // call func
+        assertFalse(result.hasOutput());
+    }
+
+    @Test
+    void printfOutputClearedBetweenSteps() {
+        sim.load("""
+                .rodata
+                fmt: .asciz "hi"
+                .text
+                .globl main
+                main:
+                    leaq fmt(%rip), %rdi
+                    call printf
+                    movq $0, %rax
+                    ret
+                """);
+
+        sim.step();
+        StepResult printf = sim.step();
+        StepResult mov = sim.step();
+
+        assertEquals("hi", printf.output());
+        assertEquals("", mov.output());
+    }
+
+    @Test
+    void printfOutputClearedOnReset() {
+        sim.load("""
+                .rodata
+                fmt: .asciz "hi"
+                .text
+                .globl main
+                main:
+                    leaq fmt(%rip), %rdi
+                    call printf
+                    ret
+                """);
+
+        sim.step();
+        sim.step(); // printf writes to buffer, step() flushes it into StepResult
+
+        // Manually write to buffer to simulate unflushed state, then reset
+        sim.getState().getIOBuffer().append("leftover");
+        sim.reset();
+
+        assertTrue(sim.getState().getIOBuffer().isEmpty());
     }
 }

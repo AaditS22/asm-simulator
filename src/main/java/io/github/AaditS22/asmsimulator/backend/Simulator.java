@@ -5,6 +5,7 @@ import io.github.AaditS22.asmsimulator.backend.cpu.LabelManager;
 import io.github.AaditS22.asmsimulator.backend.input.Parser;
 import io.github.AaditS22.asmsimulator.backend.instructions.Instruction;
 import io.github.AaditS22.asmsimulator.backend.util.MemoryLayout;
+import io.github.AaditS22.asmsimulator.backend.util.StepResult;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -58,9 +59,9 @@ public class Simulator {
 
     /**
      * Performs the next step of execution
-     * @return the description of the executed instruction
+     * @return a StepResult containing the description of the executed instruction and output if necessary
      */
-    public String step() {
+    public StepResult step() {
         if (status == Status.IDLE) {
             throw new IllegalStateException("No program loaded. Call load() first.");
         }
@@ -87,6 +88,7 @@ public class Simulator {
         }
 
         current.execute(state, labelManager);
+        String output = state.getIOBuffer().flush();
 
         long newPc = state.getPC();
         int newIndex = pcToIndex(newPc);
@@ -97,15 +99,15 @@ public class Simulator {
         }
 
         status = newIndex >= instructions.size() ? Status.HALTED : Status.READY;
-        return description;
+        return new StepResult(description, output);
     }
 
     /**
      * Runs the program until it halts or reaches the maximum number of steps
      * @param maxSteps the maximum number of steps to run
-     * @return a list of descriptions of the executed instructions
+     * @return a list of StepResults containing descriptions of the executed instructions and their outputs
      */
-    public List<String> runAll(int maxSteps) {
+    public List<StepResult> runAll(int maxSteps) {
         if (status == Status.IDLE) {
             throw new IllegalStateException("No program loaded. Call load() first.");
         }
@@ -113,20 +115,20 @@ public class Simulator {
             throw new IllegalStateException("Program has already halted.");
         }
 
-        List<String> descriptions = new ArrayList<>();
+        List<StepResult> results = new ArrayList<>();
         for (int i = 0; i < maxSteps; i++) {
-            descriptions.add(step());
+            results.add(step());
             if (status == Status.HALTED) {
                 break;
             }
         }
 
-        if (status != Status.HALTED && descriptions.size() == maxSteps) {
+        if (status != Status.HALTED && results.size() == maxSteps) {
             throw new IllegalStateException(
                     "Execution limit of " + maxSteps + " steps reached. Possible infinite loop.");
         }
 
-        return Collections.unmodifiableList(descriptions);
+        return Collections.unmodifiableList(results);
     }
 
     /**
