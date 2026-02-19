@@ -10,15 +10,7 @@ import io.github.AaditS22.asmsimulator.backend.instructions.arithmetic.IncInstru
 import io.github.AaditS22.asmsimulator.backend.instructions.arithmetic.MulInstruction;
 import io.github.AaditS22.asmsimulator.backend.instructions.arithmetic.SubInstruction;
 import io.github.AaditS22.asmsimulator.backend.instructions.branching.*;
-import io.github.AaditS22.asmsimulator.backend.instructions.logical.AndInstruction;
-import io.github.AaditS22.asmsimulator.backend.instructions.logical.CmpInstruction;
-import io.github.AaditS22.asmsimulator.backend.instructions.logical.NegInstruction;
-import io.github.AaditS22.asmsimulator.backend.instructions.logical.NotInstruction;
-import io.github.AaditS22.asmsimulator.backend.instructions.logical.OrInstruction;
-import io.github.AaditS22.asmsimulator.backend.instructions.logical.ShlInstruction;
-import io.github.AaditS22.asmsimulator.backend.instructions.logical.ShrInstruction;
-import io.github.AaditS22.asmsimulator.backend.instructions.logical.TestInstruction;
-import io.github.AaditS22.asmsimulator.backend.instructions.logical.XorInstruction;
+import io.github.AaditS22.asmsimulator.backend.instructions.logical.*;
 import io.github.AaditS22.asmsimulator.backend.instructions.movement.LeaInstruction;
 import io.github.AaditS22.asmsimulator.backend.instructions.movement.MovInstruction;
 import io.github.AaditS22.asmsimulator.backend.instructions.movement.MovzbInstruction;
@@ -44,7 +36,8 @@ public class InstructionCreator {
 
     private static final Set<String> UNSIZED_MNEMONICS = Set.of(
             "ret", "jmp", "call", "loop",
-            "je", "jne", "jg", "jge", "jl", "jle"
+            "je", "jne", "jg", "jge", "jl", "jle",
+            "nop"
     );
 
     private static final Set<String> BRANCH_MNEMONICS = Set.of(
@@ -170,6 +163,7 @@ public class InstructionCreator {
             case "jmp" -> new JmpInstruction(mnemonic, Size.QUAD, operands);
             case "call" -> new CallInstruction(mnemonic, Size.QUAD, operands);
             case "loop" -> new LoopInstruction(mnemonic, Size.QUAD, operands);
+            case "nop" -> new NopInstruction(mnemonic, Size.QUAD, operands);
             default -> new ConditionalJumpInstruction(
                     mnemonic, Size.QUAD, operands);
         };

@@ -4,6 +4,7 @@ import io.github.AaditS22.asmsimulator.backend.cpu.CPUState;
 import io.github.AaditS22.asmsimulator.backend.cpu.LabelManager;
 import io.github.AaditS22.asmsimulator.backend.instructions.logical.*;
 import io.github.AaditS22.asmsimulator.backend.instructions.operands.*;
+import io.github.AaditS22.asmsimulator.backend.util.MemoryLayout;
 import io.github.AaditS22.asmsimulator.backend.util.Size;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -393,5 +394,51 @@ class LogicalInstructionTest {
         assertTrue(and.getDescription(state, labelManager).toLowerCase().contains("and"));
         assertTrue(cmp.getDescription(state, labelManager).toLowerCase().contains("subtract"));
         assertTrue(shl.getDescription(state, labelManager).toLowerCase().contains("shift"));
+    }
+
+    @Test
+    void nopAdvancesPc() {
+        long pcBefore = state.getPC();
+        new NopInstruction("nop", Size.QUAD, List.of()).execute(state, labelManager);
+        assertEquals(pcBefore + MemoryLayout.INSTRUCTION_SIZE, state.getPC());
+    }
+
+    @Test
+    void nopDoesNotModifyRegisters() {
+        state.setRegister("rax", 8, 0xDEADBEEFL);
+        state.setRegister("rbx", 8, 0xCAFEBABEL);
+        new NopInstruction("nop", Size.QUAD, List.of()).execute(state, labelManager);
+        assertEquals(0xDEADBEEFL, state.getRegister("rax", 8));
+        assertEquals(0xCAFEBABEL, state.getRegister("rbx", 8));
+    }
+
+    @Test
+    void nopDoesNotModifyFlags() {
+        state.getFlags().updateAddFlags(0x7FFFFFFFFFFFFFFFL, 1L, 64);
+        boolean zf = state.getFlags().isZero();
+        boolean sf = state.getFlags().isNegative();
+        boolean cf = state.getFlags().isCarry();
+        boolean of = state.getFlags().isOverflow();
+
+        new NopInstruction("nop", Size.QUAD, List.of()).execute(state, labelManager);
+
+        assertEquals(zf, state.getFlags().isZero());
+        assertEquals(sf, state.getFlags().isNegative());
+        assertEquals(cf, state.getFlags().isCarry());
+        assertEquals(of, state.getFlags().isOverflow());
+    }
+
+    @Test
+    void nopRejectsOperands() {
+        assertThrows(IllegalArgumentException.class, () ->
+                new NopInstruction("nop", Size.QUAD, List.of(new RegisterOperand("%rax"))));
+    }
+
+    @Test
+    void nopDescriptionIsNonEmpty() {
+        String desc = new NopInstruction("nop", Size.QUAD, List.of())
+                .getDescription(state, labelManager);
+        assertNotNull(desc);
+        assertFalse(desc.isBlank());
     }
 }
