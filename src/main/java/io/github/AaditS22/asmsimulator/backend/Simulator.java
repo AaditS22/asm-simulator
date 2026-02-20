@@ -17,7 +17,8 @@ public class Simulator {
     // READY: Program loaded, ready to execute
     // RUNNING: Program is currently executing
     // HALTED: Program has halted execution
-    public enum Status { IDLE, READY, RUNNING, HALTED }
+    // WAITING_FOR_INPUT: Program is waiting for user input (after a scanf call)
+    public enum Status { IDLE, READY, RUNNING, HALTED, WAITING_FOR_INPUT }
 
     private final CPUState state;
     private final LabelManager labelManager;
@@ -68,6 +69,10 @@ public class Simulator {
         if (status == Status.HALTED) {
             throw new IllegalStateException("Program has already halted.");
         }
+        if (status == Status.WAITING_FOR_INPUT) {
+            throw new IllegalStateException(
+                    "Program is waiting for user input. Call provideInput() before stepping again.");
+        }
 
         long pc = state.getPC();
         int index = pcToIndex(pc);
@@ -88,6 +93,20 @@ public class Simulator {
         }
 
         current.execute(state, labelManager);
+
+        if (state.getIOBuffer().isExitRequested()) {
+            String output = state.getIOBuffer().flush();
+            status = Status.HALTED;
+            return new StepResult(description, output);
+        }
+
+        if (state.getIOBuffer().isWaitingForInput()) {
+            state.getIOBuffer().setWaitingForInput(false);
+            String output = state.getIOBuffer().flush();
+            status = Status.WAITING_FOR_INPUT;
+            return new StepResult(description, output);
+        }
+
         String output = state.getIOBuffer().flush();
 
         long newPc = state.getPC();
@@ -100,6 +119,22 @@ public class Simulator {
 
         status = newIndex >= instructions.size() ? Status.HALTED : Status.READY;
         return new StepResult(description, output);
+    }
+
+    /**
+     * Provides input to the program after a scanf call
+     * @param input the input to provide
+     */
+    public void provideInput(String input) {
+        if (status != Status.WAITING_FOR_INPUT) {
+            throw new IllegalStateException(
+                    "Simulator is not waiting for input. Current status: " + status);
+        }
+        if (input == null) {
+            throw new IllegalArgumentException("Input cannot be null.");
+        }
+        state.getIOBuffer().setInput(input);
+        status = Status.READY;
     }
 
     /**
@@ -118,12 +153,13 @@ public class Simulator {
         List<StepResult> results = new ArrayList<>();
         for (int i = 0; i < maxSteps; i++) {
             results.add(step());
-            if (status == Status.HALTED) {
+            if (status == Status.HALTED || status == Status.WAITING_FOR_INPUT) {
                 break;
             }
         }
 
-        if (status != Status.HALTED && results.size() == maxSteps) {
+        if (status != Status.HALTED && status != Status.WAITING_FOR_INPUT
+                && results.size() == maxSteps) {
             throw new IllegalStateException(
                     "Execution limit of " + maxSteps + " steps reached. Possible infinite loop.");
         }
@@ -190,6 +226,14 @@ public class Simulator {
     }
 
     /**
+     * Checks if the simulator is waiting for user input (after a scanf call)
+     * @return true if the simulator is waiting for input, false otherwise
+     */
+    public boolean isWaitingForInput() {
+        return status == Status.WAITING_FOR_INPUT;
+    }
+
+    /**
      * Gets the index of the current instruction
      * @return the index of the current instruction
      */
@@ -215,6 +259,17 @@ public class Simulator {
      */
     public int getTotalInstructions() {
         return instructions.size();
+    }
+
+    /**
+     * Gets the exit code of the program if it has exited, or throws if it has not halted yet
+     * @return the exit code of the program if it has exited
+     */
+    public long getExitCode() {
+        if (status != Status.HALTED) {
+            throw new IllegalStateException("Program has not halted yet.");
+        }
+        return state.getIOBuffer().getExitCode();
     }
 
     /**

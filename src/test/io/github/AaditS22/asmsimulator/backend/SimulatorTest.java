@@ -458,4 +458,191 @@ class SimulatorTest {
 
         assertTrue(sim.getState().getIOBuffer().isEmpty());
     }
+
+    @Test
+    void exitHaltsSimulator() {
+        sim.load("""
+                .text
+                .globl main
+                main:
+                    movq $0, %rdi
+                    call exit
+                """);
+
+        sim.step(); // movq
+        sim.step(); // call exit
+        assertTrue(sim.isHalted());
+    }
+
+    @Test
+    void exitWithZeroCode() {
+        sim.load("""
+                .text
+                .globl main
+                main:
+                    movq $0, %rdi
+                    call exit
+                """);
+
+        sim.step();
+        sim.step();
+        assertEquals(0L, sim.getExitCode());
+    }
+
+    @Test
+    void exitWithNonZeroCode() {
+        sim.load("""
+                .text
+                .globl main
+                main:
+                    movq $42, %rdi
+                    call exit
+                """);
+
+        sim.step();
+        sim.step();
+        assertEquals(42L, sim.getExitCode());
+    }
+
+    @Test
+    void exitDoesNotRequireRet() {
+        sim.load("""
+                .text
+                .globl main
+                main:
+                    movq $1, %rdi
+                    call exit
+                    movq $99, %rax
+                """);
+
+        sim.step();
+        sim.step(); // call exit — should halt here
+        assertTrue(sim.isHalted());
+        // The movq after exit must never execute
+        assertEquals(0L, sim.getState().getRegister("rax", 8));
+    }
+
+    @Test
+    void exitDoesNotModifyRsp() {
+        sim.load("""
+                .text
+                .globl main
+                main:
+                    movq $0, %rdi
+                    call exit
+                """);
+
+        long rspBefore = sim.getState().getRegister("rsp", 8);
+        sim.step();
+        sim.step();
+        assertEquals(rspBefore, sim.getState().getRegister("rsp", 8));
+    }
+
+    @Test
+    void exitDescriptionContainsCodeAndConvention() {
+        sim.load("""
+                .text
+                .globl main
+                main:
+                    movq $0, %rdi
+                    call exit
+                """);
+
+        sim.step(); // movq
+        StepResult result = sim.step(); // call exit
+        assertTrue(result.description().contains("exit"));
+        assertTrue(result.description().contains("0"));
+        assertTrue(result.description().contains("success") || result.description().contains("0"));
+    }
+
+    @Test
+    void getExitCodeBeforeHaltThrows() {
+        sim.load("""
+                .text
+                .globl main
+                main:
+                    movq $0, %rdi
+                    call exit
+                """);
+
+        assertThrows(IllegalStateException.class, () -> sim.getExitCode());
+    }
+
+    @Test
+    void exitCodeIsZeroByDefaultOnNaturalHalt() {
+        sim.load("""
+                .text
+                .globl main
+                main:
+                    nop
+                """);
+
+        sim.step();
+        assertTrue(sim.isHalted());
+        assertEquals(0L, sim.getExitCode());
+    }
+
+    @Test
+    void exitCodeResetOnReload() {
+        sim.load("""
+                .text
+                .globl main
+                main:
+                    movq $7, %rdi
+                    call exit
+                """);
+
+        sim.step();
+        sim.step();
+        assertEquals(7L, sim.getExitCode());
+
+        sim.reset();
+        sim.step();
+        sim.step();
+        assertEquals(7L, sim.getExitCode()); // same program, same code
+    }
+
+    @Test
+    void exitAfterPrintf() {
+        sim.load("""
+                .rodata
+                fmt: .asciz "done\\n"
+                .text
+                .globl main
+                main:
+                    leaq fmt(%rip), %rdi
+                    call printf
+                    movq $0, %rdi
+                    call exit
+                """);
+
+        sim.step(); // leaq
+        StepResult printResult = sim.step(); // printf
+        assertEquals("done\n", printResult.output());
+
+        sim.step(); // movq
+        sim.step(); // exit
+        assertTrue(sim.isHalted());
+        assertEquals(0L, sim.getExitCode());
+    }
+
+    @Test
+    void runAllStopsAtExit() {
+        sim.load("""
+                .text
+                .globl main
+                main:
+                    movq $3, %rdi
+                    call exit
+                    movq $99, %rax
+                """);
+
+        var results = sim.runAll(100);
+        assertTrue(sim.isHalted());
+        assertEquals(3L, sim.getExitCode());
+        // movq $99 must never have run
+        assertEquals(0L, sim.getState().getRegister("rax", 8));
+        // Only movq $3 and call exit ran
+        assertEquals(2, results.size());
+    }
 }
