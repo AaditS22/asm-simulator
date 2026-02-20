@@ -94,6 +94,12 @@ public class Simulator {
 
         current.execute(state, labelManager);
 
+        if (state.getIOBuffer().isExitRequested()) {
+            String output = state.getIOBuffer().flush();
+            status = Status.HALTED;
+            return new StepResult(description, output);
+        }
+
         if (state.getIOBuffer().isWaitingForInput()) {
             state.getIOBuffer().setWaitingForInput(false);
             String output = state.getIOBuffer().flush();
@@ -253,6 +259,17 @@ public class Simulator {
      */
     public int getTotalInstructions() {
         return instructions.size();
+    }
+
+    /**
+     * Gets the exit code of the program if it has exited, or throws if it has not halted yet
+     * @return the exit code of the program if it has exited
+     */
+    public long getExitCode() {
+        if (status != Status.HALTED) {
+            throw new IllegalStateException("Program has not halted yet.");
+        }
+        return state.getIOBuffer().getExitCode();
     }
 
     /**

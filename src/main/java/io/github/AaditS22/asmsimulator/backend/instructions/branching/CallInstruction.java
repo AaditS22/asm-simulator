@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Set;
 
 public class CallInstruction extends Instruction {
-    private static final Set<String> SPECIAL_FUNCTIONS = Set.of("printf", "scanf");
+    private static final Set<String> SPECIAL_FUNCTIONS = Set.of("printf", "scanf", "exit");
 
     public CallInstruction(String mnemonic, Size size, List<Operand> operands) {
         super(mnemonic, size, operands);
@@ -49,6 +49,11 @@ public class CallInstruction extends Instruction {
                 }
                 state.getMemory().stackPop();
                 state.nextInstruction();
+                return;
+            }
+            if (name.equals("exit")) {
+                long code = state.getRegister("rdi", 8);
+                state.getIOBuffer().requestExit(code);
                 return;
             }
             if (SPECIAL_FUNCTIONS.contains(name) && !labelManager.isCodeLabel(name)) {
@@ -89,6 +94,13 @@ public class CallInstruction extends Instruction {
                             + "The return address of the next instruction is pushed to the stack and "
                             + "popped immediately after execution.";
                 }
+            }
+            if (name.equals("exit")) {
+                long code = state.getRegister("rdi", 8);
+                return "Calls the special function 'exit'. Reads the exit status code from %rdi "
+                        + "(currently " + code + ") and immediately terminates the program. "
+                        + "By convention, a status of 0 means success and any non-zero value "
+                        + "indicates an error or abnormal termination.";
             }
         }
 

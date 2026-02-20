@@ -4,6 +4,8 @@ public class IOBuffer {
     private final StringBuilder buffer = new StringBuilder();
     private String pendingInput = null;
     private boolean waitingForInput = false;
+    private boolean exitRequested = false;
+    private long exitCode = 0;
 
     /**
      * Adds text to the buffer
@@ -28,6 +30,10 @@ public class IOBuffer {
      */
     public void reset() {
         buffer.setLength(0);
+        pendingInput = null;
+        waitingForInput = false;
+        exitRequested = false;
+        exitCode = 0;
     }
 
     /**
@@ -71,6 +77,31 @@ public class IOBuffer {
      */
     public boolean isWaitingForInput() {
         return waitingForInput;
+    }
+
+    /**
+     * Requests the CPU to exit with the given code
+     * @param code The exit code to use
+     */
+    public void requestExit(long code) {
+        this.exitRequested = true;
+        this.exitCode = code;
+    }
+
+    /**
+     * Checks if the CPU has requested to exit
+     * @return true if the CPU has requested to exit, false otherwise
+     */
+    public boolean isExitRequested() {
+        return exitRequested;
+    }
+
+    /**
+     * Gets the exit code to use
+     * @return The exit code to use
+     */
+    public long getExitCode() {
+        return exitCode;
     }
 
     /**
