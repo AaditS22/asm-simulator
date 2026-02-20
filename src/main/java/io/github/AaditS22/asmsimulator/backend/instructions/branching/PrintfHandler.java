@@ -45,8 +45,10 @@ public class PrintfHandler {
             sb.append((char) (b & 0xFF));
             if (i == MAX_STRING_LENGTH - 1) {
                 throw new IllegalArgumentException(
-                        "String at address 0x" + Long.toHexString(address)
-                                + " exceeds maximum length of " + MAX_STRING_LENGTH);
+                        "The string at address 0x" + Long.toHexString(address) + " exceeds "
+                                + MAX_STRING_LENGTH + " characters without a null terminator. Make sure "
+                                + "your string is defined with '.asciz' (which adds '\\0' automatically) "
+                                + "rather than '.ascii', and that the address in %rdi is correct.");
             }
         }
         return sb.toString();

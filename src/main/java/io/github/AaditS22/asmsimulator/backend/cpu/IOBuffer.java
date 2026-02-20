@@ -2,6 +2,8 @@ package io.github.AaditS22.asmsimulator.backend.cpu;
 
 public class IOBuffer {
     private final StringBuilder buffer = new StringBuilder();
+    private String pendingInput = null;
+    private boolean waitingForInput = false;
 
     /**
      * Adds text to the buffer
@@ -34,5 +36,48 @@ public class IOBuffer {
      */
     public boolean isEmpty() {
         return buffer.isEmpty();
+    }
+
+    /**
+     * Sets the pending input to the given string
+     * @param input The input to set
+     */
+    public void setInput(String input) {
+        this.pendingInput = input;
+        this.waitingForInput = false;
+    }
+
+    /**
+     * Checks if there is pending input
+     * @return true if there is pending input, false otherwise
+     */
+    public boolean hasInput() {
+        return pendingInput != null;
+    }
+
+    /**
+     * Consumes the pending input and returns it
+     * @return The consumed input
+     */
+    public String consumeInput() {
+        String input = pendingInput;
+        pendingInput = null;
+        return input;
+    }
+
+    /**
+     * Checks if the CPU is waiting for input
+     * @return true if the CPU is waiting for input, false otherwise
+     */
+    public boolean isWaitingForInput() {
+        return waitingForInput;
+    }
+
+    /**
+     * Sets the waiting flag
+     * @param waiting whether to set it to true or false
+     */
+    public void setWaitingForInput(boolean waiting) {
+        this.waitingForInput = waiting;
     }
 }
