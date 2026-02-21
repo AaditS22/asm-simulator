@@ -1,5 +1,7 @@
 package io.github.AaditS22.asmsimulator.frontend;
 
+import io.github.AaditS22.asmsimulator.frontend.util.AsmHighlighter;
+import io.github.AaditS22.asmsimulator.frontend.util.ConfirmDialog;
 import javafx.animation.PauseTransition;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -123,26 +125,25 @@ public class EditorView extends VBox {
     }
 
     private HBox buildTopBar(Runnable onBack) {
-        HBox bar = new HBox();
+        HBox bar = new HBox(8);
         bar.setAlignment(Pos.CENTER_LEFT);
         bar.setPadding(new Insets(0, 16, 0, 16));
         bar.setPrefHeight(40);
+        bar.setMinHeight(40);
+        VBox.setVgrow(bar, Priority.NEVER);
         bar.setStyle(
                 "-fx-background-color: " + BG_PANEL + ";" +
                         "-fx-border-color: transparent transparent " + BORDER_SOFT + " transparent;" +
                         "-fx-border-width: 1;"
         );
-
         Label project = new Label("x86-64 AT&T Assembly Simulator");
         project.setStyle(
                 "-fx-font-family: " + SANS + ";" +
                         "-fx-font-size: 12;" +
                         "-fx-text-fill: " + TEXT_MUTED + ";"
         );
-
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
-
         Label backBtn = new Label("← Home");
         backBtn.setPadding(new Insets(4, 12, 4, 12));
         String backDefault =
@@ -163,8 +164,31 @@ public class EditorView extends VBox {
         backBtn.setOnMouseEntered(e -> backBtn.setStyle(backHover));
         backBtn.setOnMouseExited(e -> backBtn.setStyle(backDefault));
         backBtn.setOnMouseClicked(e -> onBack.run());
-
-        bar.getChildren().addAll(project, spacer, backBtn);
+        Label closeBtn = new Label("✕");
+        closeBtn.setPadding(new Insets(4, 10, 4, 10));
+        String closeDefault =
+                "-fx-background-color: " + BG_RAISED + ";" +
+                        "-fx-background-radius: 4;" +
+                        "-fx-font-family: " + SANS + ";" +
+                        "-fx-font-size: 13;" +
+                        "-fx-text-fill: " + TEXT_MUTED + ";" +
+                        "-fx-cursor: hand;";
+        String closeHover =
+                "-fx-background-color: #C0392B;" +
+                        "-fx-background-radius: 4;" +
+                        "-fx-font-family: " + SANS + ";" +
+                        "-fx-font-size: 13;" +
+                        "-fx-text-fill: white;" +
+                        "-fx-cursor: hand;";
+        closeBtn.setStyle(closeDefault);
+        closeBtn.setOnMouseEntered(e -> closeBtn.setStyle(closeHover));
+        closeBtn.setOnMouseExited(e -> closeBtn.setStyle(closeDefault));
+        closeBtn.setOnMouseClicked(e -> {
+            if (ConfirmDialog.show(getScene().getWindow(), "Are you sure you want to close the application?")) {
+                ((Stage) getScene().getWindow()).close();
+            }
+        });
+        bar.getChildren().addAll(project, spacer, backBtn, closeBtn);
         return bar;
     }
 
@@ -463,9 +487,10 @@ public class EditorView extends VBox {
                     "-fx-font-family: " + MONO + ";" +
                             "-fx-font-size: 12;" +
                             "-fx-text-fill: " + GUTTER_TEXT + ";" +
-                            "-fx-padding: 0 14 0 10;" +
+                            "-fx-padding: 0 8 0 8;" +
                             "-fx-background-color: " + BG_GUTTER + ";" +
-                            "-fx-pref-width: 48;" +
+                            "-fx-pref-width: 56;" +
+                            "-fx-min-width: 56;" +
                             "-fx-alignment: CENTER_RIGHT;"
             );
             return node;
