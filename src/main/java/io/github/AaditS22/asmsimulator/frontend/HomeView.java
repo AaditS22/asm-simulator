@@ -1,8 +1,5 @@
 package io.github.AaditS22.asmsimulator.frontend;
 
-import javafx.animation.FadeTransition;
-import javafx.animation.ParallelTransition;
-import javafx.animation.TranslateTransition;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -16,11 +13,11 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
-import javafx.util.Duration;
 
 import java.awt.*;
 import java.net.URI;
 
+// DISCLAIMER: This class was largely written with the help of LLMs
 public class HomeView extends VBox {
 
     private static final String BG_BASE      = "#2B2B2B";
@@ -232,7 +229,6 @@ public class HomeView extends VBox {
                 buildActionRow(onGetStarted)
         );
 
-        animateIn(panel);
         return panel;
     }
 
@@ -267,9 +263,9 @@ public class HomeView extends VBox {
 
     private Label buildDescription() {
         Label desc = new Label(
-                "Run your custom assembly code instruction by instruction. " +
-                        "Registers, the stack, flags, and memory update live so you can see exactly" +
-                        " what your program is doing."
+                "Write and/or upload custom assembly code, then watch it run in the simulator!" +
+                        " Visualize how the CPU's state is changing with each instruction, and get detailed" +
+                        " descriptions of your code!"
         );
         desc.setStyle(
                 "-fx-font-family: " + SANS + ";" +
@@ -294,7 +290,7 @@ public class HomeView extends VBox {
     }
 
     private VBox buildDisclaimerPanel() {
-        Label hint = new Label("DISCLAIMER: This is only a teaching tool and does not perfectly replicate real CPU " +
+        Label hint = new Label("DISCLAIMER: This is only a teaching tool and does not perfectly mimic real CPU " +
                 "behaviour. It is made as a learning and experimentation tool, not to be used for production.");
 
         hint.setStyle(
@@ -320,22 +316,5 @@ public class HomeView extends VBox {
         VBox.setMargin(warningBox, new Insets(16, 0, 0, 0));
 
         return warningBox;
-    }
-
-    private void animateIn(VBox panel) {
-        panel.setOpacity(0);
-        panel.setTranslateY(16);
-
-        FadeTransition fade = new FadeTransition(Duration.millis(500), panel);
-        fade.setFromValue(0);
-        fade.setToValue(1);
-
-        TranslateTransition slide = new TranslateTransition(Duration.millis(500), panel);
-        slide.setFromY(16);
-        slide.setToY(0);
-
-        ParallelTransition intro = new ParallelTransition(fade, slide);
-        intro.setDelay(Duration.millis(80));
-        intro.play();
     }
 }
