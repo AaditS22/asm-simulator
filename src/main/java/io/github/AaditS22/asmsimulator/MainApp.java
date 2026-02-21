@@ -5,6 +5,7 @@ import io.github.AaditS22.asmsimulator.frontend.HomeView;
 import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
+import javafx.stage.StageStyle;
 
 public class MainApp extends Application {
     private HomeView homeView;
@@ -17,6 +18,7 @@ public class MainApp extends Application {
         this.editorView = new EditorView(() -> showHome(stage));
         this.homeView = new HomeView(() -> showEditor(stage));
 
+        stage.initStyle(StageStyle.UNDECORATED);
         Scene scene = new Scene(homeView, 1280, 800);
         stage.setScene(scene);
         stage.setMaximized(true);

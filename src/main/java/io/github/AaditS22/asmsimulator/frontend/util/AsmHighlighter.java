@@ -1,4 +1,4 @@
-package io.github.AaditS22.asmsimulator.frontend;
+package io.github.AaditS22.asmsimulator.frontend.util;
 
 import org.fxmisc.richtext.model.StyleSpans;
 import org.fxmisc.richtext.model.StyleSpansBuilder;
@@ -7,7 +7,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 // DISCLAIMER: This class was largely written with the help of LLMs
-public final class AsmHighlighter {
+public class AsmHighlighter {
 
     private static final String S_DEFAULT   = "-fx-fill: #BBBBBB;";
     private static final String S_COMMENT   = "-fx-fill: #6A8759;";

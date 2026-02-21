@@ -1,5 +1,6 @@
 package io.github.AaditS22.asmsimulator.frontend;
 
+import io.github.AaditS22.asmsimulator.frontend.util.ConfirmDialog;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -13,6 +14,7 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import javafx.stage.StageStyle;
 
 import java.awt.*;
 import java.net.URI;
@@ -84,7 +86,7 @@ public class HomeView extends VBox {
     }
 
     private HBox buildTopBar() {
-        HBox bar = new HBox();
+        HBox bar = new HBox(8);
         bar.setAlignment(Pos.CENTER_LEFT);
         bar.setPadding(new Insets(0, 16, 0, 16));
         bar.setPrefHeight(40);
@@ -128,27 +130,84 @@ public class HomeView extends VBox {
         aboutBtn.setOnMouseExited(e -> aboutBtn.setStyle(aboutDefault));
         aboutBtn.setOnMouseClicked(e -> showAboutDialog());
 
-        bar.getChildren().addAll(project, spacer, aboutBtn);
+        Label closeBtn = new Label("✕");
+        closeBtn.setPadding(new Insets(4, 10, 4, 10));
+        String closeDefault =
+                "-fx-background-color: " + BG_RAISED + ";" +
+                        "-fx-background-radius: 4;" +
+                        "-fx-font-family: " + SANS + ";" +
+                        "-fx-font-size: 11.5;" +
+                        "-fx-text-fill: " + TEXT_MUTED + ";" +
+                        "-fx-cursor: hand;";
+        String closeHover =
+                "-fx-background-color: #C0392B;" +
+                        "-fx-background-radius: 4;" +
+                        "-fx-font-family: " + SANS + ";" +
+                        "-fx-font-size: 11.5;" +
+                        "-fx-text-fill: white;" +
+                        "-fx-cursor: hand;";
+        closeBtn.setStyle(closeDefault);
+        closeBtn.setOnMouseEntered(e -> closeBtn.setStyle(closeHover));
+        closeBtn.setOnMouseExited(e -> closeBtn.setStyle(closeDefault));
+        closeBtn.setOnMouseClicked(e -> {
+            if (ConfirmDialog.show(getScene().getWindow(), "Are you sure you want to close the application?")) {
+                ((Stage) getScene().getWindow()).close();
+            }
+        });
+
+        bar.getChildren().addAll(project, spacer, aboutBtn, closeBtn);
         return bar;
     }
 
     private void showAboutDialog() {
         Stage stage = new Stage();
         stage.initModality(Modality.APPLICATION_MODAL);
-        stage.setTitle("About");
+        stage.initOwner(getScene().getWindow());
+        stage.initStyle(StageStyle.UNDECORATED);
 
-        VBox root = new VBox(16);
-        root.setAlignment(Pos.CENTER);
-        root.setPadding(new Insets(30));
-        root.setStyle("-fx-background-color: " + BG_BASE + ";");
+        HBox titleBar = new HBox();
+        titleBar.setAlignment(Pos.CENTER_LEFT);
+        titleBar.setPadding(new Insets(0, 12, 0, 16));
+        titleBar.setPrefHeight(36);
+        titleBar.setStyle(
+                "-fx-background-color: " + BG_PANEL + ";" +
+                        "-fx-border-color: transparent transparent " + BORDER_SOFT + " transparent;" +
+                        "-fx-border-width: 1;"
+        );
 
-        Label title = new Label("ASM SIM");
-        title.setStyle(
+        Label titleBarLabel = new Label("About");
+        titleBarLabel.setStyle(
+                "-fx-font-family: " + SANS + ";" +
+                        "-fx-font-size: 11.5;" +
+                        "-fx-text-fill: " + TEXT_MUTED + ";"
+        );
+
+        Region titleSpacer = new Region();
+        HBox.setHgrow(titleSpacer, Priority.ALWAYS);
+
+        Label closeX = getCloseX(stage);
+
+        titleBar.getChildren().addAll(titleBarLabel, titleSpacer, closeX);
+
+        // — Body —
+        VBox body = new VBox(20);
+        body.setAlignment(Pos.CENTER);
+        body.setPadding(new Insets(36, 40, 36, 40));
+        body.setStyle("-fx-background-color: " + BG_BASE + ";");
+
+        Label appName = new Label("Version 1.0");
+        appName.setStyle(
                 "-fx-font-family: " + SANS + ";" +
                         "-fx-font-size: 20;" +
                         "-fx-font-weight: bold;" +
-                        "-fx-text-fill: " + TEXT_BRIGHT + ";"
+                        "-fx-text-fill: " + AMBER + ";"
         );
+
+        Region divider = new Region();
+        divider.setPrefHeight(1);
+        divider.setPrefWidth(200);
+        divider.setMaxWidth(200);
+        divider.setStyle("-fx-background-color: " + BORDER_SOFT + ";");
 
         Label creator = new Label("Created by AaditS22");
         creator.setStyle(
@@ -157,13 +216,49 @@ public class HomeView extends VBox {
                         "-fx-text-fill: " + TEXT_PRIMARY + ";"
         );
 
-        Hyperlink githubLink = new Hyperlink("View Project Code on GitHub");
+        Hyperlink githubLink = getGithubLink();
+
+        body.getChildren().addAll(appName, divider, creator, githubLink);
+
+        VBox root = new VBox(0, titleBar, body);
+        root.setStyle(
+                "-fx-background-color: " + BG_BASE + ";" +
+                        "-fx-border-color: " + BORDER_SOFT + ";" +
+                        "-fx-border-width: 1;"
+        );
+
+        Scene scene = new Scene(root, 340, 280);
+        stage.setScene(scene);
+        stage.setResizable(false);
+        stage.showAndWait();
+    }
+
+    private static Hyperlink getGithubLink() {
+        Hyperlink githubLink = new Hyperlink("View project on GitHub →");
         githubLink.setStyle(
-                "-fx-font-family: " + MONO + ";" +
+                "-fx-font-family: " + SANS + ";" +
                         "-fx-font-size: 12;" +
                         "-fx-text-fill: " + AMBER + ";" +
-                        "-fx-border-color: transparent;"
+                        "-fx-border-color: transparent;" +
+                        "-fx-underline: false;" +
+                        "-fx-cursor: hand;"
         );
+        githubLink.setOnMouseEntered(e -> githubLink.setStyle(
+                "-fx-font-family: " + SANS + ";" +
+                        "-fx-font-size: 12;" +
+                        "-fx-text-fill: " + TEXT_BRIGHT + ";" +
+                        "-fx-border-color: transparent;" +
+                        "-fx-underline: true;" +
+                        "-fx-cursor: hand;"
+        ));
+        githubLink.setOnMouseExited(e -> githubLink.setStyle(
+                "-fx-font-family: " + SANS + ";" +
+                        "-fx-font-size: 12;" +
+                        "-fx-text-fill: " + AMBER + ";" +
+                        "-fx-border-color: transparent;" +
+                        "-fx-underline: false;" +
+                        "-fx-cursor: hand;"
+        ));
         githubLink.setOnAction(e -> {
             try {
                 Desktop.getDesktop().browse(new URI("https://github.com/AaditS22/asm-simulator"));
@@ -171,21 +266,31 @@ public class HomeView extends VBox {
                 ex.printStackTrace();
             }
         });
+        return githubLink;
+    }
 
-        Button closeBtn = new Button("Close");
-        closeBtn.setStyle(BTN_DEFAULT);
-        closeBtn.setOnMouseEntered(e -> closeBtn.setStyle(BTN_HOVER));
-        closeBtn.setOnMouseExited(e -> closeBtn.setStyle(BTN_DEFAULT));
-        closeBtn.setOnAction(e -> stage.close());
-
-        VBox.setMargin(closeBtn, new Insets(10, 0, 0, 0));
-
-        root.getChildren().addAll(title, creator, githubLink, closeBtn);
-
-        Scene scene = new Scene(root, 320, 220);
-        stage.setScene(scene);
-        stage.setResizable(false);
-        stage.showAndWait();
+    private static Label getCloseX(Stage stage) {
+        Label closeX = new Label("✕");
+        closeX.setPadding(new Insets(4, 8, 4, 8));
+        String xDefault =
+                "-fx-background-color: transparent;" +
+                        "-fx-background-radius: 4;" +
+                        "-fx-font-family: " + SANS + ";" +
+                        "-fx-font-size: 12;" +
+                        "-fx-text-fill: " + TEXT_MUTED + ";" +
+                        "-fx-cursor: hand;";
+        String xHover =
+                "-fx-background-color: #C0392B;" +
+                        "-fx-background-radius: 4;" +
+                        "-fx-font-family: " + SANS + ";" +
+                        "-fx-font-size: 12;" +
+                        "-fx-text-fill: white;" +
+                        "-fx-cursor: hand;";
+        closeX.setStyle(xDefault);
+        closeX.setOnMouseEntered(e -> closeX.setStyle(xHover));
+        closeX.setOnMouseExited(e -> closeX.setStyle(xDefault));
+        closeX.setOnMouseClicked(e -> stage.close());
+        return closeX;
     }
 
     private StackPane buildCenterContent(Runnable onGetStarted) {
