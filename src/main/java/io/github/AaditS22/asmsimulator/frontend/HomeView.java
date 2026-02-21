@@ -97,7 +97,7 @@ public class HomeView extends VBox {
                         "-fx-border-width: 1;"
         );
 
-        Label project = new Label("asm-simulator");
+        Label project = new Label("x86-64 AT&T Assembly Simulator");
         project.setStyle(
                 "-fx-font-family: " + SANS + ";" +
                         "-fx-font-size: 12;" +
@@ -267,7 +267,7 @@ public class HomeView extends VBox {
 
     private Label buildDescription() {
         Label desc = new Label(
-                "Write or upload assembly code, then run it instruction by instruction. " +
+                "Run your custom assembly code instruction by instruction. " +
                         "Registers, the stack, flags, and memory update live so you can see exactly" +
                         " what your program is doing."
         );
