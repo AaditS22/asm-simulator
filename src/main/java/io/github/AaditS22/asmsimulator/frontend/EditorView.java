@@ -108,8 +108,10 @@ public class EditorView extends VBox {
     private final InlineCssTextArea codeArea;
     private final Label statusLabel;
     private final PauseTransition highlightDebounce;
+    private final Runnable onSimulate;
 
-    public EditorView(Runnable onBack) {
+    public EditorView(Runnable onBack, Runnable onSimulate) {
+        this.onSimulate = onSimulate;
         setStyle("-fx-background-color: " + BG_BASE + ";");
         VBox.setVgrow(this, Priority.ALWAYS);
 
@@ -406,7 +408,13 @@ public class EditorView extends VBox {
         simBtn.setStyle(BTN_DEFAULT);
         simBtn.setOnMouseEntered(e -> { if (!simBtn.isDisabled()) simBtn.setStyle(BTN_HOVER); });
         simBtn.setOnMouseExited(e -> simBtn.setStyle(BTN_DEFAULT));
-        simBtn.setDisable(true);
+        boolean hasCode = !codeArea.getText().isBlank();
+        simBtn.setDisable(!hasCode);
+        codeArea.textProperty().addListener((obs, oldV, newV) -> {
+            boolean enabled = !newV.isBlank();
+            simBtn.setDisable(!enabled);
+        });
+        simBtn.setOnAction(e -> onSimulate.run());
 
         section.getChildren().addAll(hint, simBtn);
         return section;
