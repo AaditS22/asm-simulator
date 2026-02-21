@@ -2,6 +2,7 @@ package io.github.AaditS22.asmsimulator;
 
 import io.github.AaditS22.asmsimulator.frontend.EditorView;
 import io.github.AaditS22.asmsimulator.frontend.HomeView;
+import io.github.AaditS22.asmsimulator.frontend.SimulatorView;
 import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
@@ -15,7 +16,7 @@ public class MainApp extends Application {
     public void start(Stage stage) {
         stage.setTitle("ASM SIM");
 
-        this.editorView = new EditorView(() -> showHome(stage));
+        this.editorView = new EditorView(() -> showHome(stage), () -> showSimulator(stage));
         this.homeView = new HomeView(() -> showEditor(stage));
 
         stage.initStyle(StageStyle.UNDECORATED);
@@ -31,5 +32,14 @@ public class MainApp extends Application {
 
     private void showEditor(Stage stage) {
         stage.getScene().setRoot(editorView);
+    }
+
+    private void showSimulator(Stage stage) {
+        String code = editorView.getCode();
+        SimulatorView simulatorView = new SimulatorView(
+                () -> showEditor(stage),
+                code
+        );
+        stage.getScene().setRoot(simulatorView);
     }
 }
