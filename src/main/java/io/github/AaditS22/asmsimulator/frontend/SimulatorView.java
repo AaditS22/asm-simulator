@@ -1,7 +1,11 @@
 package io.github.AaditS22.asmsimulator.frontend;
 
+import io.github.AaditS22.asmsimulator.backend.Simulator;
+import io.github.AaditS22.asmsimulator.backend.util.StepResult;
 import io.github.AaditS22.asmsimulator.frontend.util.AsmHighlighter;
 import io.github.AaditS22.asmsimulator.frontend.util.ConfirmDialog;
+import io.github.AaditS22.asmsimulator.frontend.util.ErrorDialog;
+import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
@@ -9,17 +13,19 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
+import javafx.scene.input.KeyCode;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.text.TextFlow;
 import javafx.stage.Stage;
-import org.fxmisc.flowless.VirtualizedScrollPane;
-import org.fxmisc.richtext.InlineCssTextArea;
-import org.fxmisc.richtext.LineNumberFactory;
 
-import java.util.function.IntFunction;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.List;
 
 // DISCLAIMER: This class was largely written with the help of LLMs
 public class SimulatorView extends VBox {
@@ -44,9 +50,11 @@ public class SimulatorView extends VBox {
 
     private static final String HIGHLIGHT_BG     = "#2E2910";
     private static final String HIGHLIGHT_BORDER = "#7A5820";
+    private static final String ACTIVE_LINE_BG = "#16537E";
 
     private static final String TERMINAL_BG    = "#141618";
     private static final String TERMINAL_GREEN = "#4EC94E";
+    private static final String TERMINAL_WHITE = "#D4D4D4";
 
     private static final String SANS = "'Segoe UI', 'Helvetica Neue', Arial, sans-serif";
     private static final String MONO = "'JetBrains Mono', 'Consolas', 'Courier New', monospace";
@@ -70,6 +78,24 @@ public class SimulatorView extends VBox {
                     "-fx-padding: 6 18 6 18;" +
                     "-fx-background-radius: 4;" +
                     "-fx-cursor: hand;";
+
+    private static final String DARK_SCROLL_CSS;
+    static {
+        String css =
+                ".scroll-bar:horizontal,.scroll-bar:vertical{" +
+                        "-fx-background-color:#141618;-fx-background-radius:0;}" +
+                        ".scroll-bar:horizontal .thumb,.scroll-bar:vertical .thumb{" +
+                        "-fx-background-color:#3C3F41;-fx-background-radius:3;}" +
+                        ".scroll-bar:horizontal .thumb:hover,.scroll-bar:vertical .thumb:hover{" +
+                        "-fx-background-color:#4C5052;-fx-background-radius:3;}" +
+                        ".scroll-bar .increment-button,.scroll-bar .decrement-button{" +
+                        "-fx-background-color:transparent;-fx-border-color:transparent;-fx-padding:0 0 0 0;}" +
+                        ".scroll-bar .increment-arrow,.scroll-bar .decrement-arrow{" +
+                        "-fx-shape:' ';-fx-padding:0;}" +
+                        ".corner{-fx-background-color:#141618;}";
+        DARK_SCROLL_CSS = "data:text/css;base64," +
+                Base64.getEncoder().encodeToString(css.getBytes(StandardCharsets.UTF_8));
+    }
 
     private static final String BTN_SECONDARY =
             "-fx-background-color: transparent;" +
@@ -95,13 +121,22 @@ public class SimulatorView extends VBox {
                     "-fx-border-radius: 4;" +
                     "-fx-cursor: hand;";
 
-    private InlineCssTextArea codeArea;
+    private List<HBox> codeRows = new ArrayList<>();
+    private ScrollPane codeScrollPane;
+    private VBox terminalLines;
+    private ScrollPane terminalScroll;
     private Label stepCounterLabel;
-    private Label terminalOutputLabel;
     private TextField terminalInputField;
     private VBox terminalPane;
     private Label instructionDescLabel;
+    private Label instructionTagLabel;
     private boolean terminalInputActive = false;
+    private Button stepBtn;
+    private Button restartBtn;
+    private final Simulator simulator = new Simulator();
+    private boolean parseSuccess = false;
+    private final StringBuilder terminalContent = new StringBuilder();
+    private List<Integer> instructionLineMap = new ArrayList<>();
 
     private final Runnable onBack;
     private final String assemblyCode;
@@ -123,6 +158,7 @@ public class SimulatorView extends VBox {
 
         VBox.setVgrow(mainContent, Priority.ALWAYS);
         getChildren().addAll(titleBar, mainContent, terminal);
+        initSimulator();
     }
 
     // ── Title Bar ──────────────────────────────────────────────────────────────
@@ -180,15 +216,17 @@ public class SimulatorView extends VBox {
     }
 
     private HBox buildControlButtons() {
-        Button restartBtn = new Button("⟳  Restart");
+        restartBtn = new Button("⟳  Restart");
         restartBtn.setStyle(BTN_SECONDARY);
         restartBtn.setOnMouseEntered(e -> restartBtn.setStyle(BTN_SECONDARY_HOVER));
         restartBtn.setOnMouseExited(e -> restartBtn.setStyle(BTN_SECONDARY));
+        restartBtn.setOnAction(e -> handleReset());
 
-        Button stepBtn = new Button("Step  ▶");
+        stepBtn = new Button("Step  ▶");
         stepBtn.setStyle(BTN_PRIMARY);
-        stepBtn.setOnMouseEntered(e -> stepBtn.setStyle(BTN_PRIMARY_HOVER));
-        stepBtn.setOnMouseExited(e -> stepBtn.setStyle(BTN_PRIMARY));
+        stepBtn.setOnMouseEntered(e -> { if (!stepBtn.isDisabled()) stepBtn.setStyle(BTN_PRIMARY_HOVER); });
+        stepBtn.setOnMouseExited(e -> { if (!stepBtn.isDisabled()) stepBtn.setStyle(BTN_PRIMARY); });
+        stepBtn.setOnAction(e -> handleStep());
 
         stepCounterLabel = new Label("step  0");
         stepCounterLabel.setStyle(
@@ -292,16 +330,10 @@ public class SimulatorView extends VBox {
         pane.setStyle("-fx-background-color: " + BG_EDITOR + ";");
 
         HBox header = buildCodePaneHeader();
+        codeScrollPane = buildCodeView();
+        VBox.setVgrow(codeScrollPane, Priority.ALWAYS);
 
-        codeArea = buildCodeArea();
-        VirtualizedScrollPane<InlineCssTextArea> scroll = new VirtualizedScrollPane<>(codeArea);
-        VBox.setVgrow(scroll, Priority.ALWAYS);
-
-        StackPane editorWrapper = new StackPane(scroll);
-        editorWrapper.setStyle("-fx-background-color: " + BG_EDITOR + ";");
-        VBox.setVgrow(editorWrapper, Priority.ALWAYS);
-
-        pane.getChildren().addAll(header, editorWrapper, buildInstructionDescPane());
+        pane.getChildren().addAll(header, codeScrollPane, buildInstructionDescPane());
         return pane;
     }
 
@@ -343,84 +375,119 @@ public class SimulatorView extends VBox {
         return header;
     }
 
-    private InlineCssTextArea buildCodeArea() {
-        InlineCssTextArea area = new InlineCssTextArea();
-        area.setEditable(false);
-        area.setWrapText(false);
-        area.setStyle(
-                "-fx-font-family: " + MONO + ";" +
-                        "-fx-font-size: 13;" +
-                        "-fx-background-color: " + BG_EDITOR + ";" +
-                        "-fx-padding: 0;"
-        );
+    private ScrollPane buildCodeView() {
+        VBox linesBox = new VBox(0);
+        linesBox.setStyle("-fx-background-color: " + BG_EDITOR + ";");
 
-        IntFunction<Node> lineNumberFactory = LineNumberFactory.get(area);
-        area.setParagraphGraphicFactory(line -> {
-            Node node = lineNumberFactory.apply(line);
-            node.setStyle(
-                    "-fx-font-family: " + MONO + ";" +
-                            "-fx-font-size: 11.5;" +
-                            "-fx-text-fill: " + GUTTER_TEXT + ";" +
-                            "-fx-padding: 0 8 0 8;" +
-                            "-fx-background-color: " + BG_GUTTER + ";" +
-                            "-fx-pref-width: 48;" +
-                            "-fx-min-width: 48;" +
-                            "-fx-alignment: CENTER_RIGHT;"
-            );
-            return node;
-        });
-
-        if (!assemblyCode.isEmpty()) {
-            area.replaceText(assemblyCode);
-            try {
-                area.setStyleSpans(0, AsmHighlighter.computeHighlighting(assemblyCode));
-            } catch (Exception ignored) {
-            }
+        String[] lines = assemblyCode.split("\\R", -1);
+        codeRows.clear();
+        for (int i = 0; i < lines.length; i++) {
+            HBox row = buildCodeRow(i + 1, lines[i]);
+            codeRows.add(row);
+            linesBox.getChildren().add(row);
         }
 
-        return area;
+        ScrollPane scroll = new ScrollPane(linesBox);
+        scroll.setFitToWidth(false);
+        scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        scroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        scroll.setStyle(
+                "-fx-background: " + BG_EDITOR + ";" +
+                        "-fx-background-color: " + BG_EDITOR + ";" +
+                        "-fx-border-color: transparent;"
+        );
+        scroll.getStylesheets().add(DARK_SCROLL_CSS);
+        VBox.setVgrow(scroll, Priority.ALWAYS);
+        return scroll;
+    }
+
+    private HBox buildCodeRow(int lineNumber, String lineText) {
+        Label gutterLabel = new Label(String.valueOf(lineNumber));
+        gutterLabel.setStyle(
+                "-fx-font-family: " + MONO + ";" +
+                        "-fx-font-size: 13;" +
+                        "-fx-text-fill: " + GUTTER_TEXT + ";" +
+                        "-fx-padding: 1 8 1 8;" +
+                        "-fx-background-color: " + BG_GUTTER + ";" +
+                        "-fx-pref-width: 48;" +
+                        "-fx-min-width: 48;" +
+                        "-fx-alignment: CENTER_RIGHT;"
+        );
+
+        TextFlow codeFlow = AsmHighlighter.buildHighlightedLine(lineText);
+        codeFlow.setStyle(
+                "-fx-font-family: " + MONO + ";" +
+                        "-fx-font-size: 13;" +
+                        "-fx-padding: 1 14 1 10;"
+        );
+
+        HBox row = new HBox(0, gutterLabel, codeFlow);
+        row.setAlignment(Pos.CENTER_LEFT);
+        row.setMinHeight(22);
+        row.setPrefHeight(22);
+        row.setStyle("-fx-background-color: " + BG_EDITOR + ";");
+        return row;
     }
 
     // ── Instruction Description Pane ──────────────────────────────────────────
 
     private VBox buildInstructionDescPane() {
         VBox pane = new VBox(0);
-        pane.setMinHeight(80);
-        pane.setPrefHeight(80);
-        pane.setMaxHeight(80);
+        pane.setMinHeight(110);
+        pane.setPrefHeight(120);
+        pane.setMaxHeight(140);
         pane.setStyle(
-                "-fx-background-color: #222426;" +
-                        "-fx-border-color: " + BORDER_SOFT + " transparent transparent transparent;" +
-                        "-fx-border-width: 1;"
+                "-fx-background-color: #1C1E21;" +
+                        "-fx-border-color: " + AMBER + " transparent transparent transparent;" +
+                        "-fx-border-width: 2 0 0 0;"
         );
 
-        HBox labelRow = new HBox(0);
-        labelRow.setAlignment(Pos.CENTER_LEFT);
-        labelRow.setPadding(new Insets(0, 14, 0, 14));
-        labelRow.setPrefHeight(22);
+        // ── Header row ──
+        HBox headerRow = new HBox(8);
+        headerRow.setAlignment(Pos.CENTER_LEFT);
+        headerRow.setPadding(new Insets(8, 14, 6, 14));
 
-        Label tag = new Label("INSTRUCTION EXPLANATION");
-        tag.setStyle(
-                "-fx-font-family: " + SANS + ";" +
+        // Small amber pill tag
+        instructionTagLabel = new Label("AWAITING EXECUTION");
+        instructionTagLabel.setPadding(new Insets(2, 8, 2, 8));
+        instructionTagLabel.setStyle(
+                "-fx-background-color: #2E2508;" +
+                        "-fx-background-radius: 3;" +
+                        "-fx-border-color: #5A4010;" +
+                        "-fx-border-width: 1;" +
+                        "-fx-border-radius: 3;" +
+                        "-fx-font-family: " + SANS + ";" +
                         "-fx-font-size: 9;" +
                         "-fx-font-weight: bold;" +
-                        "-fx-text-fill: #4A5052;" +
-                        "-fx-letter-spacing: 0.8;"
+                        "-fx-text-fill: " + AMBER + ";" +
+                        "-fx-letter-spacing: 0.6;"
         );
-        labelRow.getChildren().add(tag);
 
-        instructionDescLabel = new Label("No instruction executed yet.");
+        Region headerSpacer = new Region();
+        HBox.setHgrow(headerSpacer, Priority.ALWAYS);
+
+        Label icon = new Label("⚙");
+        icon.setStyle(
+                "-fx-font-size: 11;" +
+                        "-fx-text-fill: #3A3010;"
+        );
+
+        headerRow.getChildren().addAll(instructionTagLabel, headerSpacer, icon);
+
+        // ── Description label ──
+        instructionDescLabel = new Label("A simple English explanation of each executed instruction " +
+                "will be visible here");
         instructionDescLabel.setWrapText(true);
         instructionDescLabel.setMaxWidth(Double.MAX_VALUE);
-        instructionDescLabel.setPadding(new Insets(0, 14, 8, 14));
+        instructionDescLabel.setPadding(new Insets(0, 16, 10, 16));
         instructionDescLabel.setStyle(
                 "-fx-font-family: " + SANS + ";" +
-                        "-fx-font-size: 11.5;" +
-                        "-fx-text-fill: " + TEXT_MUTED + ";" +
-                        "-fx-line-spacing: 1;"
+                        "-fx-font-size: 12;" +
+                        "-fx-text-fill: #555759;" +
+                        "-fx-line-spacing: 2;"
         );
 
-        pane.getChildren().addAll(labelRow, instructionDescLabel);
+        pane.getChildren().addAll(headerRow, instructionDescLabel);
         return pane;
     }
 
@@ -516,6 +583,202 @@ public class SimulatorView extends VBox {
 
         pane.getChildren().addAll(header, headerDivider, content);
         return pane;
+    }
+
+    private void initSimulator() {
+        try {
+            simulator.load(assemblyCode);
+            parseSuccess = true;
+            instructionLineMap = buildInstructionLineMap();
+            terminalContent.setLength(0);
+            setTerminalOutput("Parsed successfully. Ready to simulate.");
+            highlightCurrentInstruction();
+        } catch (Exception e) {
+            parseSuccess = false;
+            String msg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
+            setTerminalError(msg);
+            disableStepButton();
+            scheduleParseErrorPopup(msg);
+        }
+    }
+
+    private List<Integer> buildInstructionLineMap() {
+        List<Integer> map = new ArrayList<>();
+        String[] lines = assemblyCode.split("\\R", -1);
+        boolean inText = true;
+
+        for (int i = 0; i < lines.length; i++) {
+            String line = lines[i];
+
+            int commentIdx = line.indexOf('#');
+            if (commentIdx >= 0) line = line.substring(0, commentIdx);
+            line = line.trim();
+            if (line.isEmpty()) continue;
+
+            int colonIdx = line.indexOf(':');
+            if (colonIdx > 0) {
+                String possibleLabel = line.substring(0, colonIdx).trim();
+                if (!possibleLabel.contains(" ") && !possibleLabel.contains("\t")) {
+                    line = line.substring(colonIdx + 1).trim();
+                }
+            }
+            if (line.isEmpty()) continue;
+
+            if (line.equals(".text")) { inText = true; continue; }
+            if (line.equals(".data") || line.equals(".bss") || line.equals(".rodata")) {
+                inText = false; continue;
+            }
+            if (line.startsWith(".section")) {
+                inText = line.contains("text");
+                continue;
+            }
+
+            if (line.startsWith(".")) continue;
+
+            if (inText) {
+                map.add(i);
+            }
+        }
+        return map;
+    }
+
+    private void highlightCurrentInstruction() {
+        if (!parseSuccess) return;
+        int idx = simulator.getCurrentInstructionIndex();
+        if (idx >= 0 && idx < instructionLineMap.size()) {
+            highlightLine(instructionLineMap.get(idx));
+        } else {
+            clearHighlight();
+        }
+    }
+
+    private void clearHighlight() {
+        for (HBox row : codeRows) {
+            row.setStyle("-fx-background-color: " + BG_EDITOR + ";");
+        }
+    }
+
+    private void scrollToLine(int lineIndex) {
+        if (codeScrollPane == null || codeRows.isEmpty()) return;
+        Platform.runLater(() -> {
+            double rowHeight = 22.0;
+            double totalHeight = codeRows.size() * rowHeight;
+            double viewportHeight = codeScrollPane.getViewportBounds().getHeight();
+            if (totalHeight <= viewportHeight) return;
+
+            double rowCenterY = lineIndex * rowHeight + rowHeight / 2.0;
+            double idealTop = rowCenterY - viewportHeight / 2.0;
+            double maxScroll = totalHeight - viewportHeight;
+            idealTop = Math.max(0, Math.min(idealTop, maxScroll));
+            codeScrollPane.setVvalue(idealTop / maxScroll);
+        });
+    }
+
+    private void handleStep() {
+        if (!parseSuccess || simulator.isHalted()) return;
+
+        try {
+            String mnemonic = simulator.getCurrentInstruction() != null
+                    ? simulator.getCurrentInstruction().getMnemonic().toUpperCase()
+                    : "INSTRUCTION";
+            StepResult result = simulator.step();
+
+            setStepCount(currentStep + 1);
+            setInstructionDescription(result.description(), mnemonic);
+
+            if (result.hasOutput()) {
+                appendTerminalOutput(result.output(), TERMINAL_WHITE);
+            }
+
+            if (simulator.isHalted()) {
+                long exitCode = simulator.getExitCode();
+                if (exitCode == 0) {
+                    appendTerminalOutput("\n[Program exited with code " + exitCode + "]", TERMINAL_GREEN);
+                } else {
+                    appendTerminalOutput("\n[Program exited with code " + exitCode + "]", RED_TEXT);
+                }
+                clearHighlight();
+                disableStepButton();
+                return;
+            }
+
+            if (simulator.isWaitingForInput()) {
+                disableStepButton();
+                activateTerminalInput();
+                return;
+            }
+
+            highlightCurrentInstruction();
+
+        } catch (Exception e) {
+            String msg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
+            appendTerminalError("\n[Runtime error] " + msg);
+            clearHighlight();
+            disableStepButton();
+        }
+    }
+
+    private void handleReset() {
+        if (!parseSuccess) return;
+        try {
+            simulator.reset();
+            terminalContent.setLength(0);
+            setTerminalOutput("Reset. Ready to simulate.");
+            setInstructionDescription(null, null);
+            setStepCount(0);
+            enableStepButton();
+            if (terminalInputActive) deactivateTerminalInput();
+            instructionLineMap = buildInstructionLineMap();
+            highlightCurrentInstruction();
+        } catch (Exception e) {
+            String msg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
+            setTerminalError(msg);
+        }
+    }
+
+    private void handleTerminalInput() {
+        String input = terminalInputField.getText();
+        addTerminalRow(input, TERMINAL_WHITE, true);
+        try {
+            simulator.provideInput(input);
+        } catch (Exception e) {
+            deactivateTerminalInput();
+            appendTerminalError("\n[Input error] " + e.getMessage());
+            return;
+        }
+        deactivateTerminalInput();
+        enableStepButton();
+        handleStep();
+    }
+
+    private void disableStepButton() {
+        if (stepBtn == null) return;
+        stepBtn.setDisable(true);
+        stepBtn.setOnMouseEntered(null);
+        stepBtn.setOnMouseExited(null);
+    }
+
+    private void enableStepButton() {
+        if (stepBtn == null) return;
+        stepBtn.setDisable(false);
+        stepBtn.setOnMouseEntered(e -> stepBtn.setStyle(BTN_PRIMARY_HOVER));
+        stepBtn.setOnMouseExited(e -> stepBtn.setStyle(BTN_PRIMARY));
+        stepBtn.setStyle(BTN_PRIMARY);
+    }
+
+    private void scheduleParseErrorPopup(String errorMessage) {
+        sceneProperty().addListener((obsSc, oldSc, newSc) -> {
+            if (newSc == null) return;
+            Runnable showPopup = () -> Platform.runLater(() ->
+                    ErrorDialog.showParseError(newSc.getWindow()));
+            if (newSc.getWindow() != null) {
+                showPopup.run();
+            } else {
+                newSc.windowProperty().addListener((obsWin, oldWin, newWin) -> {
+                    if (newWin != null) showPopup.run();
+                });
+            }
+        });
     }
 
     private HBox buildPaneHeader(String title) {
@@ -673,13 +936,6 @@ public class SimulatorView extends VBox {
                         "-fx-border-width: 1;"
         );
 
-        Label dot1 = terminalDot("#FF5F56");
-        Label dot2 = terminalDot("#FFBD2E");
-        Label dot3 = terminalDot("#27C93F");
-        HBox dots = new HBox(5, dot1, dot2, dot3);
-        dots.setAlignment(Pos.CENTER_LEFT);
-        HBox.setMargin(dots, new Insets(0, 10, 0, 0));
-
         Label title = new Label("Terminal");
         title.setStyle(
                 "-fx-font-family: " + SANS + ";" +
@@ -698,38 +954,75 @@ public class SimulatorView extends VBox {
                         "-fx-text-fill: #444849;"
         );
 
-        header.getChildren().addAll(dots, title, spacer, hint);
+        header.getChildren().addAll(title, spacer, hint);
         return header;
     }
 
-    private Label terminalDot(String color) {
-        Label dot = new Label("●");
-        dot.setStyle("-fx-text-fill: " + color + "; -fx-font-size: 8;");
-        return dot;
-    }
-
     private ScrollPane buildTerminalOutput() {
-        terminalOutputLabel = new Label("No program running.");
-        terminalOutputLabel.setStyle(
-                "-fx-font-family: " + MONO + ";" +
-                        "-fx-font-size: 12;" +
-                        "-fx-text-fill: " + TEXT_MUTED + ";" +
-                        "-fx-padding: 6 14 6 14;"
+        terminalLines = new VBox(0);
+        terminalLines.setStyle("-fx-background-color: " + TERMINAL_BG + ";");
+        terminalLines.setFillWidth(true);
+        terminalLines.heightProperty().addListener((obs, oldVal, newVal) ->
+                terminalScroll.setVvalue(1.0)
         );
-        terminalOutputLabel.setWrapText(true);
-        terminalOutputLabel.setMaxWidth(Double.MAX_VALUE);
 
-        ScrollPane scroll = new ScrollPane(terminalOutputLabel);
-        scroll.setFitToWidth(true);
-        scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
-        scroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
-        scroll.setStyle(
+        terminalScroll = new ScrollPane(terminalLines);
+        terminalScroll.setFitToWidth(true);
+        terminalScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        terminalScroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        terminalScroll.setStyle(
                 "-fx-background: " + TERMINAL_BG + ";" +
                         "-fx-background-color: " + TERMINAL_BG + ";" +
                         "-fx-border-color: transparent;"
         );
-        VBox.setVgrow(scroll, Priority.ALWAYS);
-        return scroll;
+        terminalScroll.getStylesheets().add(DARK_SCROLL_CSS);
+        VBox.setVgrow(terminalScroll, Priority.ALWAYS);
+
+        // Seed with initial message
+        addTerminalRow("No program running.", TEXT_MUTED, false);
+
+        return terminalScroll;
+    }
+
+    private void addTerminalRow(String text, String color, boolean withArrow) {
+        if (withArrow) {
+            Label arrow = new Label("❯");
+            arrow.setStyle(
+                    "-fx-font-family: " + MONO + ";" +
+                            "-fx-font-size: 12;" +
+                            "-fx-text-fill: " + color + ";" +
+                            "-fx-padding: 1 6 1 14;"
+            );
+            Label content = new Label(text);
+            content.setStyle(
+                    "-fx-font-family: " + MONO + ";" +
+                            "-fx-font-size: 12;" +
+                            "-fx-text-fill: " + color + ";" +
+                            "-fx-padding: 1 14 1 0;"
+            );
+            content.setWrapText(false);
+            HBox row = new HBox(0, arrow, content);
+            row.setAlignment(Pos.CENTER_LEFT);
+            terminalLines.getChildren().add(row);
+        } else {
+            Label content = new Label(text);
+            content.setStyle(
+                    "-fx-font-family: " + MONO + ";" +
+                            "-fx-font-size: 12;" +
+                            "-fx-text-fill: " + color + ";" +
+                            "-fx-padding: 1 14 1 14;"
+            );
+            content.setWrapText(true);
+            content.setMaxWidth(Double.MAX_VALUE);
+            terminalLines.getChildren().add(content);
+        }
+        scrollTerminalToBottom();
+    }
+
+    private void scrollTerminalToBottom() {
+        Platform.runLater(() -> {
+            if (terminalScroll != null) terminalScroll.setVvalue(1.0);
+        });
     }
 
     private HBox buildTerminalInputRow() {
@@ -742,6 +1035,11 @@ public class SimulatorView extends VBox {
         );
 
         terminalInputField = new TextField();
+        terminalInputField.setOnKeyPressed(e -> {
+            if (e.getCode() == KeyCode.ENTER && terminalInputActive) {
+                handleTerminalInput();
+            }
+        });
         terminalInputField.setEditable(false);
         terminalInputField.setPromptText("Waiting for input...");
         terminalInputField.setStyle(
@@ -766,26 +1064,37 @@ public class SimulatorView extends VBox {
         return inputRow;
     }
 
-    // ── Public API (stubs wired up later) ─────────────────────────────────────
-
-    public void setTerminalError(String message) {
-        terminalOutputLabel.setStyle(
-                "-fx-font-family: " + MONO + ";" +
-                        "-fx-font-size: 12;" +
-                        "-fx-text-fill: " + RED_TEXT + ";" +
-                        "-fx-padding: 6 14 6 14;"
-        );
-        terminalOutputLabel.setText("error: " + message);
+    public void setTerminalOutput(String text) {
+        if (terminalLines == null) return;
+        terminalLines.getChildren().clear();
+        addTerminalRow(text, TERMINAL_GREEN, false);
     }
 
-    public void setTerminalOutput(String text) {
-        terminalOutputLabel.setStyle(
-                "-fx-font-family: " + MONO + ";" +
-                        "-fx-font-size: 12;" +
-                        "-fx-text-fill: " + TERMINAL_GREEN + ";" +
-                        "-fx-padding: 6 14 6 14;"
-        );
-        terminalOutputLabel.setText(text);
+    public void setTerminalError(String message) {
+        if (terminalLines == null) return;
+        terminalLines.getChildren().clear();
+        addTerminalRow("error: " + message, RED_TEXT, false);
+    }
+
+    private void appendTerminalOutput(String text, String color) {
+        if (text == null || text.isEmpty()) return;
+        // Split on newlines so each logical line is its own row
+        String[] parts = text.split("\\R", -1);
+        for (String part : parts) {
+            if (!part.isEmpty()) {
+                addTerminalRow(part, color, false);
+            }
+        }
+    }
+
+    private void appendTerminalError(String text) {
+        if (text == null || text.isEmpty()) return;
+        String[] parts = text.split("\\R", -1);
+        for (String part : parts) {
+            if (!part.isEmpty()) {
+                addTerminalRow(part, RED_TEXT, false);
+            }
+        }
     }
 
     public void activateTerminalInput() {
@@ -828,36 +1137,61 @@ public class SimulatorView extends VBox {
     }
 
     public void highlightLine(int lineIndex) {
-        if (codeArea == null) { return; }
-        int lines = codeArea.getParagraphs().size();
-        for (int i = 0; i < lines; i++) {
-            int len = codeArea.getParagraphLength(i);
-            if (i == lineIndex) {
-                codeArea.setStyle(i, 0, len,
-                        "-fx-background-color: " + HIGHLIGHT_BG + ";"
-                );
-            } else {
-                codeArea.setStyle(i, 0, len, "-fx-background-color: transparent;");
-            }
+        for (int i = 0; i < codeRows.size(); i++) {
+            codeRows.get(i).setStyle(
+                    "-fx-background-color: " + (i == lineIndex ? ACTIVE_LINE_BG : BG_EDITOR) + ";"
+            );
         }
+        scrollToLine(lineIndex);
     }
 
-    public void setInstructionDescription(String description) {
+    public void setInstructionDescription(String description, String mnemonic) {
         if (description == null || description.isBlank()) {
-            instructionDescLabel.setText("No instruction executed yet.");
+            if (instructionTagLabel != null) {
+                instructionTagLabel.setText("AWAITING EXECUTION");
+                instructionTagLabel.setStyle(
+                        "-fx-background-color: #2A2A2A;" +
+                                "-fx-background-radius: 3;" +
+                                "-fx-border-color: " + BORDER_SOFT + ";" +
+                                "-fx-border-width: 1;" +
+                                "-fx-border-radius: 3;" +
+                                "-fx-font-family: " + SANS + ";" +
+                                "-fx-font-size: 9;" +
+                                "-fx-font-weight: bold;" +
+                                "-fx-text-fill: " + TEXT_MUTED + ";" +
+                                "-fx-letter-spacing: 0.6;"
+                );
+            }
+            instructionDescLabel.setText("A simple explanation of each executed instruction" +
+                    " will be visible here");
             instructionDescLabel.setStyle(
                     "-fx-font-family: " + SANS + ";" +
-                            "-fx-font-size: 11.5;" +
-                            "-fx-text-fill: " + TEXT_MUTED + ";" +
-                            "-fx-line-spacing: 1;"
+                            "-fx-font-size: 12;" +
+                            "-fx-text-fill: #555759;" +
+                            "-fx-line-spacing: 2;"
             );
         } else {
+            if (instructionTagLabel != null) {
+                instructionTagLabel.setText(mnemonic);
+                instructionTagLabel.setStyle(
+                        "-fx-background-color: #2E2508;" +
+                                "-fx-background-radius: 3;" +
+                                "-fx-border-color: #5A4010;" +
+                                "-fx-border-width: 1;" +
+                                "-fx-border-radius: 3;" +
+                                "-fx-font-family: " + SANS + ";" +
+                                "-fx-font-size: 9;" +
+                                "-fx-font-weight: bold;" +
+                                "-fx-text-fill: " + AMBER + ";" +
+                                "-fx-letter-spacing: 0.6;"
+                );
+            }
             instructionDescLabel.setText(description);
             instructionDescLabel.setStyle(
                     "-fx-font-family: " + SANS + ";" +
-                            "-fx-font-size: 11.5;" +
-                            "-fx-text-fill: " + TEXT_PRIMARY + ";" +
-                            "-fx-line-spacing: 1;"
+                            "-fx-font-size: 12;" +
+                            "-fx-text-fill: " + TEXT_BRIGHT + ";" +
+                            "-fx-line-spacing: 2;"
             );
         }
     }
