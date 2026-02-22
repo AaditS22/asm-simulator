@@ -142,6 +142,8 @@ public class SimulatorView extends VBox {
     private final String assemblyCode;
     private int currentStep = 0;
 
+    private StackView stackView;
+
     public SimulatorView(Runnable onBack, String assemblyCode) {
         this.onBack = onBack;
         this.assemblyCode = assemblyCode == null ? "" : assemblyCode;
@@ -475,7 +477,7 @@ public class SimulatorView extends VBox {
         headerRow.getChildren().addAll(instructionTagLabel, headerSpacer, icon);
 
         // ── Description label ──
-        instructionDescLabel = new Label("A simple English explanation of each executed instruction " +
+        instructionDescLabel = new Label("A simple explanation of each executed instruction " +
                 "will be visible here");
         instructionDescLabel.setWrapText(true);
         instructionDescLabel.setMaxWidth(Double.MAX_VALUE);
@@ -593,6 +595,7 @@ public class SimulatorView extends VBox {
             terminalContent.setLength(0);
             setTerminalOutput("Parsed successfully. Ready to simulate.");
             highlightCurrentInstruction();
+            if (stackView != null) stackView.reset(simulator.getState());
         } catch (Exception e) {
             parseSuccess = false;
             String msg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
@@ -709,10 +712,11 @@ public class SimulatorView extends VBox {
             }
 
             highlightCurrentInstruction();
+            stackView.update(simulator.getState());
 
         } catch (Exception e) {
             String msg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
-            appendTerminalError("\n[Runtime error] " + msg);
+            appendTerminalError("\nError: " + msg);
             clearHighlight();
             disableStepButton();
         }
@@ -730,6 +734,7 @@ public class SimulatorView extends VBox {
             if (terminalInputActive) deactivateTerminalInput();
             instructionLineMap = buildInstructionLineMap();
             highlightCurrentInstruction();
+            stackView.reset(simulator.getState());
         } catch (Exception e) {
             String msg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
             setTerminalError(msg);
@@ -869,19 +874,9 @@ public class SimulatorView extends VBox {
     }
 
     private Node buildStackContent() {
-        Label placeholder = new Label("Stack frames will\nappear here.");
-        placeholder.setStyle(
-                "-fx-font-family: " + MONO + ";" +
-                        "-fx-font-size: 11.5;" +
-                        "-fx-text-fill: " + TEXT_MUTED + ";" +
-                        "-fx-padding: 12 14 12 14;"
-        );
-
-        StackPane wrapper = new StackPane(placeholder);
-        wrapper.setAlignment(Pos.TOP_LEFT);
-        wrapper.setStyle("-fx-background-color: transparent;");
-        VBox.setVgrow(wrapper, Priority.ALWAYS);
-        return wrapper;
+        stackView = new StackView(simulator.getState());
+        VBox.setVgrow(stackView, Priority.ALWAYS);
+        return stackView;
     }
 
     private Node buildMemoryContent() {
@@ -1041,7 +1036,7 @@ public class SimulatorView extends VBox {
             }
         });
         terminalInputField.setEditable(false);
-        terminalInputField.setPromptText("Waiting for input...");
+        terminalInputField.setPromptText("No input requested yet.");
         terminalInputField.setStyle(
                 "-fx-background-color: transparent;" +
                         "-fx-border-color: transparent;" +
@@ -1073,7 +1068,7 @@ public class SimulatorView extends VBox {
     public void setTerminalError(String message) {
         if (terminalLines == null) return;
         terminalLines.getChildren().clear();
-        addTerminalRow("error: " + message, RED_TEXT, false);
+        addTerminalRow(message, RED_TEXT, false);
     }
 
     private void appendTerminalOutput(String text, String color) {

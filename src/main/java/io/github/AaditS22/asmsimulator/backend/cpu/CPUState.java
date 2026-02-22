@@ -15,7 +15,11 @@ public class CPUState {
      * Helper method to initialize all important registers
      */
     private void initializeRegisters() {
-        registers = new HashMap<>();
+        if (registers == null) {
+            registers = new HashMap<>();
+        } else {
+            registers.clear();
+        }
         registers.put("rax", 0L);
         registers.put("rbx", 0L);
         registers.put("rcx", 0L);
