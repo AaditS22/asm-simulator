@@ -1,5 +1,7 @@
 package io.github.AaditS22.asmsimulator.frontend.util;
 
+import javafx.scene.text.Text;
+import javafx.scene.text.TextFlow;
 import org.fxmisc.richtext.model.StyleSpans;
 import org.fxmisc.richtext.model.StyleSpansBuilder;
 
@@ -81,5 +83,43 @@ public class AsmHighlighter {
         if (m.group("REGISTER")  != null) return S_REGISTER;
         if (m.group("IMMEDIATE") != null) return S_IMMEDIATE;
         return S_DEFAULT;
+    }
+
+    /**
+     * Builds a highlighted line for the currently executing line
+     * @param line the line to highlight
+     * @return a TextFlow containing the highlighted line
+     */
+    public static TextFlow buildHighlightedLine(String line) {
+        TextFlow flow = new TextFlow();
+        if (line.isEmpty()) {
+            Text spacer = new Text(" ");
+            spacer.setStyle(S_DEFAULT);
+            flow.getChildren().add(spacer);
+            return flow;
+        }
+
+        Matcher matcher = PATTERN.matcher(line);
+        int lastEnd = 0;
+
+        while (matcher.find()) {
+            if (matcher.start() > lastEnd) {
+                flow.getChildren().add(styledText(line.substring(lastEnd, matcher.start()), S_DEFAULT));
+            }
+            flow.getChildren().add(styledText(matcher.group(), resolveStyle(matcher)));
+            lastEnd = matcher.end();
+        }
+
+        if (lastEnd < line.length()) {
+            flow.getChildren().add(styledText(line.substring(lastEnd), S_DEFAULT));
+        }
+
+        return flow;
+    }
+
+    private static Text styledText(String content, String style) {
+        Text t = new Text(content);
+        t.setStyle(style);
+        return t;
     }
 }
