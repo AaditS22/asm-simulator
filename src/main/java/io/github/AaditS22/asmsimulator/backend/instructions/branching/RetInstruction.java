@@ -22,6 +22,6 @@ public class RetInstruction extends Instruction {
 
     @Override
     public String getDescription(CPUState state, LabelManager labelManager) {
-        return "Pops the return address from the top of the stack and jumps to it";
+        return "Popped the return address from the top of the stack and jumped to it";
     }
 }

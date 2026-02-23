@@ -80,7 +80,7 @@ class BranchingInstructionTest {
         JmpInstruction instruction = new JmpInstruction("jmp", Size.QUAD, List.of(
                 label
         ));
-        assertTrue(instruction.getDescription(state, labelManager).contains("0x2000"));
+        assertTrue(instruction.getDescription(state, labelManager).contains("the label 'test'"));
     }
 
     // ==================== CALL Tests ====================
@@ -126,7 +126,7 @@ class BranchingInstructionTest {
         CallInstruction instruction = new CallInstruction("call", Size.QUAD, List.of(
                 label
         ));
-        assertTrue(instruction.getDescription(state, labelManager).contains("0x2000"));
+        assertTrue(instruction.getDescription(state, labelManager).contains("the label 'test'"));
     }
 
     // ==================== RET Tests ====================
@@ -160,7 +160,7 @@ class BranchingInstructionTest {
     @Test
     void retDescriptionTest() {
         RetInstruction instruction = new RetInstruction("ret", Size.QUAD, List.of());
-        assertEquals("Pops the return address from the top of the stack and jumps to it",
+        assertEquals("Popped the return address from the top of the stack and jumped to it",
                 instruction.getDescription(state, labelManager));
     }
 
@@ -298,7 +298,7 @@ class BranchingInstructionTest {
         ConditionalJumpInstruction instruction = new ConditionalJumpInstruction(
                 "je", Size.QUAD, List.of(new LabelOperand("test")));
         String desc = instruction.getDescription(state, labelManager);
-        assertTrue(desc.contains("0x2000"));
+        assertTrue(desc.contains("the last comparison was equal"));
     }
 
 // ==================== Loop Tests ====================
@@ -356,6 +356,6 @@ class BranchingInstructionTest {
         LoopInstruction instruction = new LoopInstruction("loop", Size.QUAD, List.of(
                 new LabelOperand("test")));
         String desc = instruction.getDescription(state, labelManager);
-        assertTrue(desc.contains("2"));
+        assertTrue(desc.contains("the label 'test'"));
     }
 }

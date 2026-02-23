@@ -82,7 +82,7 @@ class ArithmeticInstructionTest {
                 new RegisterOperand("%rax"),
                 new MemoryOperand("0x5000")
         ));
-        assertTrue(add.getDescription(state, labelManager).contains("Adds"));
+        assertTrue(add.getDescription(state, labelManager).contains("Added"));
     }
 
     @Test
@@ -93,7 +93,7 @@ class ArithmeticInstructionTest {
                 new RegisterOperand("%rax"),
                 new MemoryOperand("0x5000")
         ));
-        assertTrue(sub.getDescription(state, labelManager).contains("Subtracts"));
+        assertTrue(sub.getDescription(state, labelManager).contains("Subtracted"));
     }
 
     // ==================== INC/DEC Tests =========================
@@ -124,7 +124,7 @@ class ArithmeticInstructionTest {
         Instruction inc = new IncInstruction("incq", Size.QUAD, List.of(
                 new RegisterOperand("%rax")
         ));
-        assertTrue(inc.getDescription(state, labelManager).contains("Increments"));
+        assertTrue(inc.getDescription(state, labelManager).contains("Incremented"));
     }
 
     @Test
@@ -133,7 +133,7 @@ class ArithmeticInstructionTest {
         Instruction dec = new DecInstruction("decq", Size.QUAD, List.of(
                 new RegisterOperand("%rax")
         ));
-        assertTrue(dec.getDescription(state, labelManager).contains("Decrements"));
+        assertTrue(dec.getDescription(state, labelManager).contains("Decremented"));
     }
 
     // ==================== MUL Tests ====================

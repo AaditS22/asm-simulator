@@ -37,7 +37,7 @@ public class LeaInstruction extends Instruction {
     @Override
     public String getDescription(CPUState state, LabelManager labelManager) {
         String memoryDesc = operands.get(0).getDescription(state, labelManager);
-        String updated = memoryDesc.replace("memory at ", "");
-        return "Loads " + updated + " into " + operands.get(1).getDescription(state, labelManager);
+        String updated = memoryDesc.replace("memory at ", "the ");
+        return "Loaded " + updated + " into " + operands.get(1).getDescription(state, labelManager);
     }
 }

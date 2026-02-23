@@ -28,20 +28,29 @@ public class RegistersView extends VBox {
     private static final LinkedHashMap<String, SubRegInfo> REG_INFO = new LinkedHashMap<>();
     static {
         REG_INFO.put("rax", new SubRegInfo("eax", "ax", "al"));
-        REG_INFO.put("rbx", new SubRegInfo("ebx", "bx", "bl"));
         REG_INFO.put("rcx", new SubRegInfo("ecx", "cx", "cl"));
+        REG_INFO.put("rdi", new SubRegInfo("edi", "di", "dil"));
         REG_INFO.put("rdx", new SubRegInfo("edx", "dx", "dl"));
         REG_INFO.put("rsi", new SubRegInfo("esi", "si", "sil"));
-        REG_INFO.put("rdi", new SubRegInfo("edi", "di", "dil"));
         REG_INFO.put("r8",  new SubRegInfo("r8d",  "r8w",  "r8b"));
         REG_INFO.put("r9",  new SubRegInfo("r9d",  "r9w",  "r9b"));
         REG_INFO.put("r10", new SubRegInfo("r10d", "r10w", "r10b"));
         REG_INFO.put("r11", new SubRegInfo("r11d", "r11w", "r11b"));
+
+        REG_INFO.put("rbx", new SubRegInfo("ebx", "bx", "bl"));
         REG_INFO.put("r12", new SubRegInfo("r12d", "r12w", "r12b"));
         REG_INFO.put("r13", new SubRegInfo("r13d", "r13w", "r13b"));
         REG_INFO.put("r14", new SubRegInfo("r14d", "r14w", "r14b"));
         REG_INFO.put("r15", new SubRegInfo("r15d", "r15w", "r15b"));
     }
+
+    private static final Set<String> CALLER_SAVED = Set.of(
+            "rax", "rcx", "rdx", "rsi", "rdi", "r8", "r9", "r10", "r11"
+    );
+
+    private static final Set<String> CALLEE_SAVED = Set.of(
+            "rbx", "r12", "r13", "r14", "r15"
+    );
 
     private static final String BG_RAISED   = "#3C3F41";
     private static final String BG_HOVER    = "#4C5052";
@@ -123,27 +132,54 @@ public class RegistersView extends VBox {
         scroll.getStylesheets().add(DARK_SCROLL_CSS);
         VBox.setVgrow(scroll, Priority.ALWAYS);
 
-        getChildren().add(scroll);
+        HBox legend = buildLegend();
+
+        getChildren().addAll(legend, scroll);
         setStyle("-fx-background-color: transparent;");
         VBox.setVgrow(this, Priority.ALWAYS);
 
-        render(false, null);
+        render(false);
     }
 
-    public void update(CPUState state, Set<String> involvedRegs) {
+    private HBox buildLegend() {
+        Label callerBox = new Label("■");
+        callerBox.setStyle("-fx-text-fill: #73C991; -fx-font-size: 14;");
+        Label callerText = new Label("Caller-saved");
+        callerText.setStyle("-fx-font-family: " + SANS + "; -fx-font-size: 10.5; -fx-text-fill: " + TEXT_MUTED + ";");
+
+        Label calleeBox = new Label("■");
+        calleeBox.setStyle("-fx-text-fill: #E8BA36; -fx-font-size: 14;");
+        Label calleeText = new Label("Callee-saved");
+        calleeText.setStyle("-fx-font-family: " + SANS + "; -fx-font-size: 10.5; -fx-text-fill: " + TEXT_MUTED + ";");
+
+        HBox legend = new HBox(6, callerBox, callerText, new Label("   "), calleeBox, calleeText);
+        legend.setAlignment(Pos.CENTER_LEFT);
+        legend.setPadding(new Insets(4, 10, 0, 14));
+        return legend;
+    }
+
+    /**
+     * Updates the view with the current CPU state
+     * @param state the new CPU state
+     */
+    public void update(CPUState state) {
         this.cpuState = state;
-        render(true, involvedRegs);
+        render(true);
     }
 
+    /**
+     * Resets the view to its initial state
+     * @param state the current CPU state
+     */
     public void reset(CPUState state) {
         this.cpuState = state;
         lastValues.clear();
         changedRegs.clear();
         dismissPopup();
-        render(false, null);
+        render(false);
     }
 
-    private void render(boolean detectChanges, Set<String> involvedRegs) {
+    private void render(boolean detectChanges) {
         if (cpuState == null) return;
 
         if (detectChanges) {
@@ -154,10 +190,6 @@ public class RegistersView extends VBox {
                 if (prev != null && prev != current) {
                     changedRegs.add(reg);
                 }
-            }
-
-            if (involvedRegs != null) {
-                changedRegs.addAll(involvedRegs);
             }
         } else {
             changedRegs.clear();
@@ -178,12 +210,13 @@ public class RegistersView extends VBox {
     // ── Card building ─────────────────────────────────────────────────────────
 
     private VBox buildCard(String reg) {
+        String nameColor = CALLER_SAVED.contains(reg) ? "#73C991" : (CALLEE_SAVED.contains(reg) ? "#E8A845" : AMBER);
         Label nameLabel = new Label("%" + reg);
         nameLabel.setStyle(
                 "-fx-font-family: " + MONO + ";" +
                         "-fx-font-size: 11;" +
                         "-fx-font-weight: bold;" +
-                        "-fx-text-fill: " + AMBER + ";"
+                        "-fx-text-fill: " + nameColor + ";"
         );
 
         Label valLabel = new Label("0x0");
@@ -207,14 +240,14 @@ public class RegistersView extends VBox {
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
-        HBox topRow = new HBox(4, nameLabel, spacer, expandBtn);
+        HBox topRow = new HBox(6, nameLabel, spacer, expandBtn);
         topRow.setAlignment(Pos.CENTER_LEFT);
 
         VBox card = new VBox(3, topRow, valLabel);
         card.setPadding(new Insets(7, 10, 7, 10));
-        card.setPrefWidth(135);
-        card.setMinWidth(118);
-        card.setMaxWidth(165);
+        card.setPrefWidth(180);
+        card.setMinWidth(160);
+        card.setMaxWidth(220);
         styleCard(reg, false);
 
         card.setOnMouseEntered(e -> {

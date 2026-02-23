@@ -34,8 +34,12 @@ public class ImmediateOperand implements Operand {
 
     @Override
     public String getDescription(CPUState state, LabelManager labelManager) {
-        long value = getValue(state, labelManager, null);
-        return String.format("immediate value $%s (%d, 0x%X)", rawText, value, value);
+        try {
+            Long.decode(rawText);
+            return String.format("the constant %s", rawText);
+        } catch (NumberFormatException e) {
+            return String.format("the address of the label '%s'", rawText);
+        }
     }
 
     @Override

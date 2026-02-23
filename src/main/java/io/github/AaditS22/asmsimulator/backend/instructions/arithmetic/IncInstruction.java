@@ -29,6 +29,6 @@ public class IncInstruction extends Instruction {
 
     @Override
     public String getDescription(CPUState state, LabelManager labelManager) {
-        return "Increments " + operands.get(0).getDescription(state, labelManager) + " by 1";
+        return "Incremented " + operands.get(0).getDescription(state, labelManager) + " by 1";
     }
 }

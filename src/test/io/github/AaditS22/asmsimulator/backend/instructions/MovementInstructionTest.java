@@ -484,7 +484,7 @@ class MovementInstructionTest {
                 new RegisterOperand("%rbx")
         ));
         String desc = mov.getDescription(state, labelManager);
-        assertTrue(desc.startsWith("Moves"));
+        assertTrue(desc.startsWith("Copied"));
         assertTrue(desc.contains("%rax"));
         assertTrue(desc.contains("%rbx"));
     }
@@ -497,7 +497,7 @@ class MovementInstructionTest {
                 new RegisterOperand("%rax")
         ));
         String desc = lea.getDescription(state, labelManager);
-        assertTrue(desc.startsWith("Loads"));
+        assertTrue(desc.startsWith("Loaded"));
         assertTrue(desc.contains("%rax"));
     }
 
@@ -508,7 +508,7 @@ class MovementInstructionTest {
                 new RegisterOperand("%rax")
         ));
         String desc = push.getDescription(state, labelManager);
-        assertTrue(desc.contains("Pushes"));
+        assertTrue(desc.contains("Pushed"));
         assertTrue(desc.contains("stack"));
         assertTrue(desc.contains("%rax"));
     }
@@ -521,7 +521,7 @@ class MovementInstructionTest {
                 new RegisterOperand("%rax")
         ));
         String desc = pop.getDescription(state, labelManager);
-        assertTrue(desc.contains("Pops"));
+        assertTrue(desc.contains("Popped"));
         assertTrue(desc.contains("stack"));
         assertTrue(desc.contains("%rax"));
     }
@@ -535,9 +535,9 @@ class MovementInstructionTest {
                 new RegisterOperand("%rax")
         ));
         String desc = lea.getDescription(state, labelManager);
-        assertTrue(desc.startsWith("Loads"));
+        assertTrue(desc.startsWith("Loaded"));
         assertFalse(desc.contains("memory at"));
-        assertTrue(desc.contains("effective address"));
+        assertTrue(desc.contains("address"));
         assertTrue(desc.contains("%rax"));
     }
 
@@ -549,7 +549,7 @@ class MovementInstructionTest {
                 new RegisterOperand("%ebx")
         ));
         String desc = movzb.getDescription(state, labelManager);
-        assertTrue(desc.startsWith("Moves"));
+        assertTrue(desc.startsWith("Copied"));
         assertTrue(desc.contains("low byte"));
         assertTrue(desc.contains("%al"));
         assertTrue(desc.contains("%ebx"));
@@ -564,7 +564,7 @@ class MovementInstructionTest {
                 new RegisterOperand("%eax")
         ));
         String desc = movzb.getDescription(state, labelManager);
-        assertTrue(desc.startsWith("Moves"));
+        assertTrue(desc.startsWith("Copied"));
         assertTrue(desc.contains("low byte"));
         assertTrue(desc.contains("memory at"));
         assertTrue(desc.contains("%eax"));
@@ -579,7 +579,7 @@ class MovementInstructionTest {
                 new RegisterOperand("%ebx")
         ));
         String desc = movzw.getDescription(state, labelManager);
-        assertTrue(desc.startsWith("Moves"));
+        assertTrue(desc.startsWith("Copied"));
         assertTrue(desc.contains("low word"));
         assertTrue(desc.contains("%ax"));
         assertTrue(desc.contains("%ebx"));
@@ -594,7 +594,7 @@ class MovementInstructionTest {
                 new RegisterOperand("%eax")
         ));
         String desc = movzw.getDescription(state, labelManager);
-        assertTrue(desc.startsWith("Moves"));
+        assertTrue(desc.startsWith("Copied"));
         assertTrue(desc.contains("low word"));
         assertTrue(desc.contains("memory at"));
         assertTrue(desc.contains("%eax"));

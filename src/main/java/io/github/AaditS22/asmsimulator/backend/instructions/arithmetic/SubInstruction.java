@@ -31,8 +31,8 @@ public class SubInstruction extends Instruction {
 
     @Override
     public String getDescription(CPUState state, LabelManager labelManager) {
-        return "Subtracts " + operands.get(0).getDescription(state, labelManager)
+        return "Subtracted " + operands.get(0).getDescription(state, labelManager)
                 + " from " + operands.get(1).getDescription(state, labelManager)
-                + " and stores the result in the latter operand";
+                + " and stored the result in the latter operand";
     }
 }

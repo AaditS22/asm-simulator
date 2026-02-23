@@ -684,9 +684,6 @@ public class SimulatorView extends VBox {
         if (!parseSuccess || simulator.isHalted()) return;
 
         try {
-            Set<String> involvedRegs = simulator.getCurrentInstruction() != null ?
-                    simulator.getCurrentInstruction().getInvolvedRegisters()
-                    : null;
 
             String mnemonic = simulator.getCurrentInstruction() != null
                     ? simulator.getCurrentInstruction().getMnemonic().toUpperCase()
@@ -701,7 +698,7 @@ public class SimulatorView extends VBox {
             }
 
             if (stackView != null) stackView.update(simulator.getState());
-            if (registersView != null) registersView.update(simulator.getState(), involvedRegs);
+            if (registersView != null) registersView.update(simulator.getState());
             if (flagsView != null) flagsView.update(simulator.getState());
             if (memoryView != null) memoryView.update(simulator.getState());
 

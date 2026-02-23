@@ -66,16 +66,15 @@ public class ConditionalJumpInstruction extends Instruction {
     @Override
     public String getDescription(CPUState state, LabelManager labelManager) {
         String conditionDescription = switch (condition) {
-            case "e" -> "equal (ZF=1)";
-            case "ne" -> "not equal (ZF=0)";
-            case "g" -> "greater (ZF=0 and SF=OF)";
-            case "ge" -> "greater or equal (SF=OF)";
-            case "l" -> "less (SF!=OF)";
-            case "le" -> "less or equal (ZF=1 or SF≠OF)";
-            default -> "invalid condition";
+            case "e"  -> "the last comparison was equal";
+            case "ne" -> "the last comparison was not equal";
+            case "g"  -> "the last comparison was greater";
+            case "ge" -> "the last comparison was greater or equal";
+            case "l"  -> "the last comparison was less";
+            case "le" -> "the last comparison was less or equal";
+            default   -> "the condition is invalid";
         };
-        return "Jumps to " + operands.get(0).getDescription(state, labelManager)
-                + " if the previous flag-changing operation produced flags that were "
-                + conditionDescription;
+        return "Jumped to the instruction at " + operands.get(0).getDescription(state, labelManager)
+                + " based on if " + conditionDescription + " (by examining the CPU flags set by the comparison).";
     }
 }

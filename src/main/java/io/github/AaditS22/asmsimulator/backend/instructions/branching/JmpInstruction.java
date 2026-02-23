@@ -28,7 +28,7 @@ public class JmpInstruction extends Instruction {
 
     @Override
     public String getDescription(CPUState state, LabelManager labelManager) {
-        return "Unconditional jump to the instruction with address: " +
+        return "Jumped to the instruction at " +
                 operands.get(0).getDescription(state, labelManager);
     }
 }

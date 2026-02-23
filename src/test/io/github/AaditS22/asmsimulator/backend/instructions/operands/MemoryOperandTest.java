@@ -269,12 +269,12 @@ class MemoryOperandTest {
     public void testGetDescriptionOnlyDisplacement() {
         // Numeric displacement
         MemoryOperand op1 = new MemoryOperand("0x1000");
-        assertEquals("memory at effective address 0x1000 (resolved as: displacement 0x1000)",
+        assertEquals("memory at address 0x1000 (calculated as: displacement 0x1000)",
                 op1.getDescription(state, labelManager));
 
         // Label displacement
         MemoryOperand op2 = new MemoryOperand("my_var");
-        assertEquals("memory at effective address 0x3000 (resolved as: address of label my_var)",
+        assertEquals("memory at address 0x3000 (calculated as: address of label my_var)",
                 op2.getDescription(state, labelManager));
     }
 
@@ -293,20 +293,20 @@ class MemoryOperandTest {
     public void testGetDescriptionRIPRelative() {
         // RIP-relative with label
         MemoryOperand opLabel = new MemoryOperand("my_var(%rip)");
-        assertEquals("memory at effective address 0x3000 (resolved as: RIP-relative label my_var)",
+        assertEquals("memory at address 0x3000 (calculated as: RIP-relative label my_var)",
                 opLabel.getDescription(state, labelManager));
 
         // RIP-relative with raw offset
         MemoryOperand opRaw = new MemoryOperand("3(%rip)");
         String desc = opRaw.getDescription(state, labelManager);
-        assertTrue(desc.contains("resolved as: %rip + 3"));
+        assertTrue(desc.contains("calculated as: %rip + 3"));
     }
 
     @Test
     public void testGetDescriptionBaseOnly() {
         // Just (%rax) -> Address 0x1000
         MemoryOperand op = new MemoryOperand("(%rax)");
-        assertEquals("memory at effective address 0x1000 (resolved as: displacement[0] + base[%rax])",
+        assertEquals("memory at address 0x1000 (calculated as: displacement[0] + base[%rax])",
                 op.getDescription(state, labelManager));
     }
 
@@ -314,6 +314,6 @@ class MemoryOperandTest {
     public void testGetDescriptionBaseIndexDisplacement() {
         MemoryOperand op = new MemoryOperand("2(%rax,%rcx)");
         assertTrue(op.getDescription(state, labelManager)
-                .contains("resolved as: displacement[2] + base[%rax] + (index[%rcx] * scale[1])"));
+                .contains("calculated as: displacement[2] + base[%rax] + (index[%rcx] * scale[1])"));
     }
 }

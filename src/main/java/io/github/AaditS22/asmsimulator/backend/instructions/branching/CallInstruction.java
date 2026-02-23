@@ -74,38 +74,27 @@ public class CallInstruction extends Instruction {
         if (target instanceof LabelOperand labelOperand) {
             String name = labelOperand.toAssemblyString();
             if (name.equals("printf")) {
-                return "Calls the special function 'printf'. Gets the format string from %rdi and " +
-                        "collects arguments from %rsi, %rdx, %rcx, %r8, and %r9 (and more from the stack if needed)" +
-                        " to print to the standard output. The return address of the next instruction is pushed to the"
-                        + " stack and popped immediately after execution.";
+                return "Called the special function 'printf'. Used the format string in %rdi and values from "
+                        + "%rsi, %rdx, %rcx, %r8, and %r9 (and the stack if needed) to print formatted output." +
+                        " Set %rax to the number of characters printed.";
             }
             if (name.equals("scanf")) {
                 if (!state.getIOBuffer().hasInput()) {
-                    return "Calls the special function 'scanf'. Reads the format string from %rdi " +
-                            "and expects pointer arguments in %rsi, %rdx, %rcx, "
-                            + "%r8, and %r9 (and more from the stack if needed). Each pointer is a "
-                            + "memory address where a parsed input value will be written. Execution is "
-                            + "now paused until the user provides input.";
+                    return "Called the special function 'scanf'. Uses the format string in %rdi and pointer arguments "
+                            + "in %rsi, %rdx, %rcx, %r8, and %r9. Execution pauses until the user provides input.";
                 } else {
-                    return "Calls the special function 'scanf'. Resumes with the provided user input, "
-                            + "parsing it against the format string . Each matched "
-                            + "value is written to the memory address held in the corresponding pointer "
-                            + "argument. Sets %rax to the number of items successfully matched and stored. "
-                            + "The return address of the next instruction is pushed to the stack and "
-                            + "popped immediately after execution.";
+                    return "Resumed 'scanf' with user input. Parsed values were written to the memory addresses "
+                            + "given by the pointer arguments. Set %rax to the number of values successfully read.";
                 }
             }
             if (name.equals("exit")) {
-                long code = state.getRegister("rdi", 8);
-                return "Calls the special function 'exit'. Reads the exit status code from %rdi "
-                        + "(currently " + code + ") and immediately terminates the program. "
-                        + "By convention, a status of 0 means success and any non-zero value "
-                        + "indicates an error or abnormal termination.";
+                return "Called the special function 'exit'. Terminated the program with the exit code "
+                        + " from %rdi (0 = success, non-zero = error).";
             }
         }
 
-        return "Pushes the return address (address of next instruction) " +
-                "onto the stack, then jumps to the instruction with address: "
+        return "Pushed the return address (address of next instruction) " +
+                "onto the stack, then jumped to the instruction at: "
                 + target.getDescription(state, labelManager);
     }
 }

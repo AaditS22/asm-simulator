@@ -21,6 +21,6 @@ public class NopInstruction extends Instruction {
 
     @Override
     public String getDescription(CPUState state, LabelManager labelManager) {
-        return "No operation; does nothing and advances to the next instruction";
+        return "No operation. Does nothing and advances to the next instruction";
     }
 }
