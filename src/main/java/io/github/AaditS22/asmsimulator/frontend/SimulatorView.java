@@ -142,6 +142,7 @@ public class SimulatorView extends VBox {
 
     private StackView stackView;
     private RegistersView registersView;
+    private FlagsView flagsView;
 
     public SimulatorView(Runnable onBack, String assemblyCode) {
         this.onBack = onBack;
@@ -596,6 +597,7 @@ public class SimulatorView extends VBox {
             highlightCurrentInstruction();
             if (stackView != null) stackView.reset(simulator.getState());
             if (registersView != null) registersView.reset(simulator.getState());
+            if (flagsView != null) flagsView.reset(simulator.getState());
         } catch (Exception e) {
             parseSuccess = false;
             String msg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
@@ -697,6 +699,10 @@ public class SimulatorView extends VBox {
                 appendTerminalOutput(result.output(), TERMINAL_WHITE);
             }
 
+            stackView.update(simulator.getState());
+            registersView.update(simulator.getState(), involvedRegs);
+            if (flagsView != null) flagsView.update(simulator.getState());
+
             if (simulator.isHalted()) {
                 long exitCode = simulator.getExitCode();
                 if (exitCode == 0) {
@@ -716,8 +722,6 @@ public class SimulatorView extends VBox {
             }
 
             highlightCurrentInstruction();
-            stackView.update(simulator.getState());
-            registersView.update(simulator.getState(), involvedRegs);
 
         } catch (Exception e) {
             String msg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
@@ -741,6 +745,7 @@ public class SimulatorView extends VBox {
             highlightCurrentInstruction();
             stackView.reset(simulator.getState());
             registersView.reset(simulator.getState());
+            if (flagsView != null) flagsView.reset(simulator.getState());
         } catch (Exception e) {
             String msg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
             setTerminalError(msg);
@@ -823,50 +828,9 @@ public class SimulatorView extends VBox {
     }
 
     private Node buildFlagsContent() {
-        VBox content = new VBox(8);
-        content.setPadding(new Insets(12, 14, 12, 14));
-        content.setAlignment(Pos.TOP_LEFT);
-
-        String[] flagNames = {"ZF", "CF", "SF", "OF"};
-        String[] flagDescs = {"Zero", "Carry", "Sign", "Overflow"};
-        for (int i = 0; i < flagNames.length; i++) {
-            content.getChildren().add(buildFlagRow(flagNames[i], flagDescs[i]));
-        }
-
-        return content;
-    }
-
-    private HBox buildFlagRow(String flagName, String flagDesc) {
-        Label nameLabel = new Label(flagName);
-        nameLabel.setStyle(
-                "-fx-font-family: " + MONO + ";" +
-                        "-fx-font-size: 11.5;" +
-                        "-fx-font-weight: bold;" +
-                        "-fx-text-fill: " + BLUE + ";" +
-                        "-fx-pref-width: 28;"
-        );
-
-        Label descLabel = new Label(flagDesc);
-        descLabel.setStyle(
-                "-fx-font-family: " + SANS + ";" +
-                        "-fx-font-size: 10.5;" +
-                        "-fx-text-fill: " + TEXT_MUTED + ";"
-        );
-        HBox.setHgrow(descLabel, Priority.ALWAYS);
-
-        Label valueChip = new Label("—");
-        valueChip.setPadding(new Insets(1, 7, 1, 7));
-        valueChip.setStyle(
-                "-fx-background-color: " + BG_RAISED + ";" +
-                        "-fx-background-radius: 3;" +
-                        "-fx-font-family: " + MONO + ";" +
-                        "-fx-font-size: 11;" +
-                        "-fx-text-fill: " + TEXT_MUTED + ";"
-        );
-
-        HBox row = new HBox(8, nameLabel, descLabel, valueChip);
-        row.setAlignment(Pos.CENTER_LEFT);
-        return row;
+        flagsView = new FlagsView(simulator.getState());
+        VBox.setVgrow(flagsView, Priority.ALWAYS);
+        return flagsView;
     }
 
     private Node buildStackContent() {
