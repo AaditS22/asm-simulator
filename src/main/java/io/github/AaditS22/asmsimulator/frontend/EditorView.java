@@ -99,11 +99,13 @@ public class EditorView extends VBox {
     private static final String PLACEHOLDER =
             """
                     # Example code
+                    # This moves 0 to %rdi, signalling a successful exit
+                    # Then calls the exit function to quit the program
                     .text
-                        .global main
+                    .global main
                     main:
-                        movq $0, %rdi
-                        call exit
+                            movq $0, %rdi
+                            call exit
                     """;
 
     private final InlineCssTextArea codeArea;

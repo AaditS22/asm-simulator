@@ -17,7 +17,6 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
-import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.TextFlow;
 import javafx.stage.Stage;
@@ -143,6 +142,7 @@ public class SimulatorView extends VBox {
     private StackView stackView;
     private RegistersView registersView;
     private FlagsView flagsView;
+    private MemoryView memoryView;
 
     public SimulatorView(Runnable onBack, String assemblyCode) {
         this.onBack = onBack;
@@ -598,6 +598,7 @@ public class SimulatorView extends VBox {
             if (stackView != null) stackView.reset(simulator.getState());
             if (registersView != null) registersView.reset(simulator.getState());
             if (flagsView != null) flagsView.reset(simulator.getState());
+            if (memoryView != null) memoryView.reset(simulator.getState(), simulator.getLabelManager());
         } catch (Exception e) {
             parseSuccess = false;
             String msg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
@@ -699,9 +700,10 @@ public class SimulatorView extends VBox {
                 appendTerminalOutput(result.output(), TERMINAL_WHITE);
             }
 
-            stackView.update(simulator.getState());
-            registersView.update(simulator.getState(), involvedRegs);
+            if (stackView != null) stackView.update(simulator.getState());
+            if (registersView != null) registersView.update(simulator.getState(), involvedRegs);
             if (flagsView != null) flagsView.update(simulator.getState());
+            if (memoryView != null) memoryView.update(simulator.getState());
 
             if (simulator.isHalted()) {
                 long exitCode = simulator.getExitCode();
@@ -743,9 +745,10 @@ public class SimulatorView extends VBox {
             if (terminalInputActive) deactivateTerminalInput();
             instructionLineMap = buildInstructionLineMap();
             highlightCurrentInstruction();
-            stackView.reset(simulator.getState());
-            registersView.reset(simulator.getState());
+            if (stackView != null) stackView.reset(simulator.getState());
+            if (registersView != null) registersView.reset(simulator.getState());
             if (flagsView != null) flagsView.reset(simulator.getState());
+            if (memoryView != null) memoryView.reset(simulator.getState(), simulator.getLabelManager());
         } catch (Exception e) {
             String msg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
             setTerminalError(msg);
@@ -819,8 +822,6 @@ public class SimulatorView extends VBox {
         return header;
     }
 
-    // ── Pane Placeholder Content ───────────────────────────────────────────────
-
     private Node buildRegistersContent() {
         registersView = new RegistersView(simulator.getState());
         VBox.setVgrow(registersView, Priority.ALWAYS);
@@ -840,20 +841,9 @@ public class SimulatorView extends VBox {
     }
 
     private Node buildMemoryContent() {
-        Label placeholder = new Label("Memory addresses will appear here during simulation.");
-        placeholder.setStyle(
-                "-fx-font-family: " + MONO + ";" +
-                        "-fx-font-size: 11.5;" +
-                        "-fx-text-fill: " + TEXT_MUTED + ";" +
-                        "-fx-padding: 12 14 12 14;"
-        );
-        placeholder.setWrapText(true);
-
-        StackPane wrapper = new StackPane(placeholder);
-        wrapper.setAlignment(Pos.TOP_LEFT);
-        wrapper.setStyle("-fx-background-color: transparent;");
-        VBox.setVgrow(wrapper, Priority.ALWAYS);
-        return wrapper;
+        memoryView = new MemoryView(simulator.getState(), simulator.getLabelManager());
+        VBox.setVgrow(memoryView, Priority.ALWAYS);
+        return memoryView;
     }
 
     // ── Terminal (Bottom) ─────────────────────────────────────────────────────
