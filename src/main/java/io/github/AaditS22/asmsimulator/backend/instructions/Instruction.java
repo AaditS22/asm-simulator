@@ -7,12 +7,8 @@ import io.github.AaditS22.asmsimulator.backend.instructions.movement.MovzwInstru
 import io.github.AaditS22.asmsimulator.backend.instructions.operands.MemoryOperand;
 import io.github.AaditS22.asmsimulator.backend.instructions.operands.Operand;
 import io.github.AaditS22.asmsimulator.backend.instructions.operands.RegisterOperand;
-import io.github.AaditS22.asmsimulator.backend.util.RegisterInfo;
 import io.github.AaditS22.asmsimulator.backend.util.Size;
-
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 public abstract class Instruction {
     protected final List<Operand> operands;
@@ -79,32 +75,5 @@ public abstract class Instruction {
                     mnemonic + " expects " + expectedCount + " operand(s), got " + operands.size()
             );
         }
-    }
-
-    /**
-     * Gets a set of all registers involved in the current instruction (for UI updates)
-     * @return a set of all registers involved in the current instruction
-     */
-    public Set<String> getInvolvedRegisters() {
-        Set<String> regs = new HashSet<>();
-        for (Operand operand : operands) {
-            if (operand instanceof RegisterOperand) {
-                addBaseRegister(regs, operand.toAssemblyString().trim());
-            }
-        }
-        return regs.isEmpty() ? null : regs;
-    }
-
-    /**
-     * Helper method to add a base register to a set of registers
-     * @param regs the set of registers to add to
-     * @param regName the name of the register to add
-     */
-    private void addBaseRegister(Set<String> regs, String regName) {
-        String cleanName = regName.replace("%", "").toUpperCase();
-        try {
-            RegisterInfo info = RegisterInfo.valueOf(cleanName);
-            regs.add(info.getBaseRegister());
-        } catch (IllegalArgumentException ignored) {}
     }
 }

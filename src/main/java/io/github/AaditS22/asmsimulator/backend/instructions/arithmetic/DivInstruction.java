@@ -83,17 +83,17 @@ public class DivInstruction extends Instruction {
     public String getDescription(CPUState state, LabelManager labelManager) {
         String srcDesc = operands.get(0).getDescription(state, labelManager);
         return switch (size) {
-            case BYTE -> "Divides (unsigned) value in AX by " + srcDesc +
-                    ", storing the 8-bit quotient in AL and the 8-bit remainder in AH";
+            case BYTE -> "Divided AX by " + srcDesc +
+                            ". The quotient was stored in %al, and the remainder in %ah";
 
-            case WORD -> "Divides (unsigned) the value formed by DX (high 16 bits) and AX (low 16 bits) by " + srcDesc +
-                    ", storing the 16-bit quotient in AX and the 16-bit remainder in DX";
+            case WORD -> "Divided the combined DX:AX value by " + srcDesc +
+                            ". The quotient was stored in AX, and the remainder in DX";
 
-            case LONG -> "Divides (unsigned) the value formed by EDX (high 32 bits) and EAX (low 32 bits) by "
-                    + srcDesc + ", storing the 32-bit quotient in EAX and the 32-bit remainder in EDX";
+            case LONG -> "Divided the combined EDX:EAX value by " + srcDesc +
+                            ". The quotient was stored in EAX, and the remainder in EDX";
 
-            case QUAD -> "Divides (unsigned) the value formed by RDX (high 64 bits) and RAX (low 64 bits) by "
-                    + srcDesc + ", storing the 64-bit quotient in RAX and the 64-bit remainder in RDX";
+            case QUAD -> "Divided the combined RDX:RAX value by " + srcDesc +
+                            ". The quotient was stored in RAX, and the remainder in RDX";
         };
     }
 

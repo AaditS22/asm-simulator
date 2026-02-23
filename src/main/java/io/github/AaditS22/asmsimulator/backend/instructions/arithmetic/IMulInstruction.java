@@ -150,36 +150,36 @@ public class IMulInstruction extends Instruction {
         if (operands.size() == 1) {
             String srcDesc = operands.get(0).getDescription(state, labelManager);
             return switch (size) {
-                case BYTE -> "Multiplies (signed) AL with " + srcDesc +
-                        " and stores the 16-bit result in AX";
+                case BYTE -> "Multiplied (signed) AL with " + srcDesc +
+                        " and stored the result in AX";
 
-                case WORD -> "Multiplies (signed) AX with " + srcDesc +
-                        " and stores the 32-bit result across DX (high 16 bits) and AX (low 16 bits)";
+                case WORD -> "Multiplied (signed) AX with " + srcDesc +
+                        " and stored the result across DX (high 16 bits) and AX (low 16 bits)";
 
-                case LONG -> "Multiplies (signed) EAX with " + srcDesc +
-                        " and stores the 64-bit result across EDX (high 32 bits) and EAX (low 32 bits)";
+                case LONG -> "Multiplied (signed) EAX with " + srcDesc +
+                        " and stored the result across EDX (high 32 bits) and EAX (low 32 bits)";
 
-                case QUAD -> "Multiplies (signed) RAX with " + srcDesc +
-                        " and stores the 128-bit result across RDX (high 32 bits) and RAX (low 32 bits)";
+                case QUAD -> "Multiplied (signed) RAX with " + srcDesc +
+                        " and stored the result across RDX (high 64 bits) and RAX (low 64 bits)";
             };
         }
 
         else if (operands.size() == 2) {
-            return "Multiplies (signed) "
+            return "Multiplied (signed) "
                     + operands.get(1).getDescription(state, labelManager)
                     + " with "
                     + operands.get(0).getDescription(state, labelManager)
-                    + " and stores the truncated "
+                    + " and stored the truncated "
                     + (size.getBytes() * 8)
                     + "-bit result back into the destination register";
         }
 
         else {
-            return "Multiplies (signed) "
+            return "Multiplied (signed) "
                     + operands.get(1).getDescription(state, labelManager)
                     + " with "
                     + operands.get(0).getDescription(state, labelManager)
-                    + " and stores the truncated "
+                    + " and stored the truncated "
                     + (size.getBytes() * 8)
                     + "-bit result into "
                     + operands.get(2).getDescription(state, labelManager);

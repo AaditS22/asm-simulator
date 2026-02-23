@@ -31,8 +31,8 @@ public class AddInstruction extends Instruction {
 
     @Override
     public String getDescription(CPUState state, LabelManager labelManager) {
-        return "Adds " + operands.get(0).getDescription(state, labelManager) + " and " +
-                operands.get(1).getDescription(state, labelManager) + " and stores the result in the" +
+        return "Added " + operands.get(0).getDescription(state, labelManager) + " and " +
+                operands.get(1).getDescription(state, labelManager) + " and stored the result in the" +
                 " latter operand";
     }
 }

@@ -27,11 +27,11 @@ public class MovInstruction extends Instruction {
     public String getDescription(CPUState state, LabelManager labelManager) {
         Operand dest = operands.get(1);
         if (dest instanceof MemoryOperand) {
-            return "Moves " + operands.get(0).getDescription(state, labelManager) + " to "
+            return "Copied " + operands.get(0).getDescription(state, labelManager) + " to "
                     + dest.getDescription(state, labelManager)
-                    .replace("memory at ", "");
+                    .replace("memory at ", "the ");
         }
-        return "Moves " + operands.get(0).getDescription(state, labelManager) + " to "
+        return "Copied " + operands.get(0).getDescription(state, labelManager) + " to "
                 + dest.getDescription(state, labelManager);
     }
 }

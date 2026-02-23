@@ -34,7 +34,7 @@ public class ShrInstruction extends Instruction {
 
     @Override
     public String getDescription(CPUState state, LabelManager labelManager) {
-        return "Shifts " + operands.get(1).getDescription(state, labelManager)
+        return "Shifted " + operands.get(1).getDescription(state, labelManager)
                 + " right by " + operands.get(0).getDescription(state, labelManager) + " bits";
     }
 }

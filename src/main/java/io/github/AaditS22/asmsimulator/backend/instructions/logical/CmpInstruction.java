@@ -29,8 +29,8 @@ public class CmpInstruction extends Instruction {
 
     @Override
     public String getDescription(CPUState state, LabelManager labelManager) {
-        return "Subtracts " + operands.get(0).getDescription(state, labelManager)
-                + " from " + operands.get(1).getDescription(state, labelManager)
-                + " and updates flags based on the result";
+        return "Compared " + operands.get(0).getDescription(state, labelManager)
+                + " and " + operands.get(1).getDescription(state, labelManager)
+                + " by subtracting the latter from the former and updating flags based on the result";
     }
 }

@@ -29,8 +29,7 @@ public class LabelOperand implements Operand {
 
     @Override
     public String getDescription(CPUState state, LabelManager labelManager) {
-        long address = getValue(state, labelManager, null);
-        return String.format("label '%s' (address 0x%X)", labelName, address);
+        return String.format("the label '%s'", labelName);
     }
 
     @Override

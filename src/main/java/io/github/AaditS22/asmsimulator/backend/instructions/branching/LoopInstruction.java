@@ -33,7 +33,8 @@ public class LoopInstruction extends Instruction {
 
     @Override
     public String getDescription(CPUState state, LabelManager labelManager) {
-        return "Decrements %%rcx by 1 and jumps to " + operands.get(0).getDescription(state, labelManager)
-                + " if the new value is not zero";
+        return "Decremented %rcx by 1 and jumped to the instruction at "
+                + operands.get(0).getDescription(state, labelManager)
+                + " if the new value was not zero";
     }
 }

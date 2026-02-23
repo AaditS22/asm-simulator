@@ -293,7 +293,7 @@ class ScanfHandlerTest {
         StepResult result = sim.step(); // call scanf — should pause
         assertTrue(sim.isWaitingForInput());
         assertFalse(result.description().isEmpty());
-        assertTrue(result.description().contains("paused"));
+        assertTrue(result.description().contains("pauses"));
     }
 
     @Test
@@ -318,7 +318,7 @@ class ScanfHandlerTest {
         sim.provideInput("5");
         StepResult resume = sim.step(); // completes
         assertNotEquals(pause.description(), resume.description());
-        assertTrue(resume.description().contains("Resumes"));
+        assertTrue(resume.description().contains("Resumed"));
     }
 
     @Test

@@ -30,7 +30,7 @@ public class MovzwInstruction extends Instruction {
 
     @Override
     public String getDescription(CPUState state, LabelManager labelManager) {
-        return "Moves the low word of " + operands.get(0).getDescription(state, labelManager) + " to "
+        return "Copied the low word of " + operands.get(0).getDescription(state, labelManager) + " to "
                 + operands.get(1).getDescription(state, labelManager) + " (zero-extended)";
     }
 }

@@ -26,8 +26,8 @@ public class PushInstruction extends Instruction {
     public String getDescription(CPUState state, LabelManager labelManager) {
         Operand src = operands.get(0);
         if (src instanceof RegisterOperand) {
-            return "Pushes the value of " + src.getDescription(state, labelManager) + " onto the stack";
+            return "Pushed the value of " + src.getDescription(state, labelManager) + " onto the stack";
         }
-        return "Pushes " + src.getDescription(state, labelManager) + " onto the stack";
+        return "Pushed " + src.getDescription(state, labelManager) + " onto the stack";
     }
 }

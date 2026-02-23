@@ -27,8 +27,8 @@ public class PopInstruction extends Instruction {
         Operand dest = operands.get(0);
         String destString = dest.getDescription(state, labelManager);
         if (dest instanceof MemoryOperand) {
-            destString = destString.replace("memory at ", "");
+            destString = destString.replace("memory at ", "the ");
         }
-        return "Pops the top of the stack into " + destString;
+        return "Popped the top of the stack into " + destString;
     }
 }

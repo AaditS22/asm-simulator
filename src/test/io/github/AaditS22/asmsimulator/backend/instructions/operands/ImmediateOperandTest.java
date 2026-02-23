@@ -62,9 +62,9 @@ class ImmediateOperandTest {
     @Test
     void getDescriptionTest() {
         ImmediateOperand io = new ImmediateOperand("$100");
-        assertEquals("immediate value $100 (100, 0x64)", io.getDescription(state, labelManager));
+        assertEquals("the constant 100", io.getDescription(state, labelManager));
 
         ImmediateOperand ioLabel = new ImmediateOperand("$my_var");
-        assertEquals("immediate value $my_var (12288, 0x3000)", ioLabel.getDescription(state, labelManager));
+        assertEquals("the address of the label 'my_var'", ioLabel.getDescription(state, labelManager));
     }
 }

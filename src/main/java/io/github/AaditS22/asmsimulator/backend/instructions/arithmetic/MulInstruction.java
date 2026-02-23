@@ -59,16 +59,16 @@ public class MulInstruction extends Instruction {
     public String getDescription(CPUState state, LabelManager labelManager) {
         String srcDesc = operands.get(0).getDescription(state, labelManager);
         return switch (size) {
-            case BYTE -> "Multiplies (unsigned) AL with " + srcDesc +
-                    " and stores the 16-bit result in AX";
-            case WORD -> "Multiplies (unsigned) AX with " + srcDesc +
-                    " and stores the 32-bit result across DX (high 16 bits) and AX (low 16 bits)";
+            case BYTE -> "Multiplied (unsigned) AL with " + srcDesc +
+                    " and stored the result in AX";
+            case WORD -> "Multiplied (unsigned) AX with " + srcDesc +
+                    " and stored the result across DX (high 16 bits) and AX (low 16 bits)";
 
-            case LONG -> "Multiplies (unsigned) EAX with " + srcDesc +
-                    " and stores the 64-bit result across EDX (high 32 bits) and EAX (low 32 bits)";
+            case LONG -> "Multiplied (unsigned) EAX with " + srcDesc +
+                    " and stored the result across EDX (high 32 bits) and EAX (low 32 bits)";
 
-            case QUAD -> "Multiplies (unsigned) RAX with " + srcDesc +
-                    " and stores the 128-bit result across RDX (high 64 bits) and RAX (low 64 bits)";
+            case QUAD -> "Multiplied (unsigned) RAX with " + srcDesc +
+                    " and stored the result across RDX (high 64 bits) and RAX (low 64 bits)";
 
         };
     }

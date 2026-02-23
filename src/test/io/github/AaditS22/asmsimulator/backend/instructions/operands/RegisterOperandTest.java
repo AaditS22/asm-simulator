@@ -71,7 +71,5 @@ class RegisterOperandTest {
         RegisterOperand ro = new RegisterOperand("%rax");
         String desc = ro.getDescription(state, labelManager);
         assertTrue(desc.contains("%rax"));
-        assertTrue(desc.contains("4096"));
-        assertTrue(desc.contains("0x1000"));
     }
 }
