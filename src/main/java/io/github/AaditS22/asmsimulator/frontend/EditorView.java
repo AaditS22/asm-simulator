@@ -24,6 +24,7 @@ import org.fxmisc.flowless.VirtualizedScrollPane;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.util.Objects;
 import java.util.function.IntFunction;
 
 // DISCLAIMER: This class was largely written with the help of LLMs
@@ -487,6 +488,7 @@ public class EditorView extends VBox {
                         "-fx-background-color: " + BG_EDITOR + ";" +
                         "-fx-padding: 0;"
         );
+        area.getStylesheets().add(Objects.requireNonNull(getClass().getResource("/editor.css")).toExternalForm());
 
         IntFunction<Node> lineNumberFactory = LineNumberFactory.get(area);
         area.setParagraphGraphicFactory(line -> {

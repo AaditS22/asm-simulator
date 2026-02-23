@@ -1,0 +1,8 @@
+.caret {
+    -fx-stroke: #E8A845;
+    -fx-stroke-width: 1px;
+}
+
+.selection {
+    -fx-fill: #4C5052;
+}
