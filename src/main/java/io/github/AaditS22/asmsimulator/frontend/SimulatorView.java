@@ -23,9 +23,7 @@ import javafx.scene.text.TextFlow;
 import javafx.stage.Stage;
 
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Base64;
-import java.util.List;
+import java.util.*;
 
 // DISCLAIMER: This class was largely written with the help of LLMs
 public class SimulatorView extends VBox {
@@ -143,6 +141,7 @@ public class SimulatorView extends VBox {
     private int currentStep = 0;
 
     private StackView stackView;
+    private RegistersView registersView;
 
     public SimulatorView(Runnable onBack, String assemblyCode) {
         this.onBack = onBack;
@@ -527,34 +526,34 @@ public class SimulatorView extends VBox {
 
     private VBox buildRightColumn() {
         HBox topRow = buildTopPaneRow();
-        topRow.setMinHeight(170);
-        topRow.setPrefHeight(180);
-        topRow.setMaxHeight(210);
+        topRow.setMinHeight(350);
+        topRow.setPrefHeight(400);
+        topRow.setMaxHeight(400);
 
         Region rowGap = new Region();
         rowGap.setPrefHeight(12);
         rowGap.setMinHeight(12);
         rowGap.setMaxHeight(12);
 
-        VBox memoryPane = buildPane("Memory", buildMemoryContent(), true);
-        VBox.setVgrow(memoryPane, Priority.ALWAYS);
+        VBox registersPane = buildPane("Registers", buildRegistersContent(), true);
+        VBox.setVgrow(registersPane, Priority.ALWAYS);
 
-        VBox col = new VBox(0, topRow, rowGap, memoryPane);
+        VBox col = new VBox(0, topRow, rowGap, registersPane);
         VBox.setVgrow(col, Priority.ALWAYS);
         return col;
     }
 
     private HBox buildTopPaneRow() {
-        VBox registersPane = buildPane("Registers", buildRegistersContent(), true);
-        VBox flagsPane     = buildPane("Flags",     buildFlagsContent(),     false);
+        VBox memoryPane = buildPane("Memory", buildMemoryContent(), true);
+        VBox flagsPane  = buildPane("Flags",  buildFlagsContent(),  false);
 
         flagsPane.setMinWidth(158);
         flagsPane.setPrefWidth(162);
         flagsPane.setMaxWidth(162);
 
-        HBox.setHgrow(registersPane, Priority.ALWAYS);
+        HBox.setHgrow(memoryPane, Priority.ALWAYS);
 
-        HBox row = new HBox(12, registersPane, flagsPane);
+        HBox row = new HBox(12, memoryPane, flagsPane);
         row.setAlignment(Pos.TOP_LEFT);
         HBox.setHgrow(row, Priority.ALWAYS);
         return row;
@@ -596,6 +595,7 @@ public class SimulatorView extends VBox {
             setTerminalOutput("Parsed successfully. Ready to simulate.");
             highlightCurrentInstruction();
             if (stackView != null) stackView.reset(simulator.getState());
+            if (registersView != null) registersView.reset(simulator.getState());
         } catch (Exception e) {
             parseSuccess = false;
             String msg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
@@ -681,6 +681,10 @@ public class SimulatorView extends VBox {
         if (!parseSuccess || simulator.isHalted()) return;
 
         try {
+            Set<String> involvedRegs = simulator.getCurrentInstruction() != null ?
+                    simulator.getCurrentInstruction().getInvolvedRegisters()
+                    : null;
+
             String mnemonic = simulator.getCurrentInstruction() != null
                     ? simulator.getCurrentInstruction().getMnemonic().toUpperCase()
                     : "INSTRUCTION";
@@ -713,6 +717,7 @@ public class SimulatorView extends VBox {
 
             highlightCurrentInstruction();
             stackView.update(simulator.getState());
+            registersView.update(simulator.getState(), involvedRegs);
 
         } catch (Exception e) {
             String msg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
@@ -735,6 +740,7 @@ public class SimulatorView extends VBox {
             instructionLineMap = buildInstructionLineMap();
             highlightCurrentInstruction();
             stackView.reset(simulator.getState());
+            registersView.reset(simulator.getState());
         } catch (Exception e) {
             String msg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
             setTerminalError(msg);
@@ -791,6 +797,7 @@ public class SimulatorView extends VBox {
         header.setAlignment(Pos.CENTER_LEFT);
         header.setPadding(new Insets(0, 12, 0, 14));
         header.setPrefHeight(34);
+        header.setMinHeight(34);
         header.setStyle("-fx-background-color: " + BG_RAISED + ";" +
                 "-fx-background-radius: 6 6 0 0;");
 
@@ -810,20 +817,9 @@ public class SimulatorView extends VBox {
     // ── Pane Placeholder Content ───────────────────────────────────────────────
 
     private Node buildRegistersContent() {
-        Label placeholder = new Label("Registers will appear here during simulation.");
-        placeholder.setStyle(
-                "-fx-font-family: " + MONO + ";" +
-                        "-fx-font-size: 11.5;" +
-                        "-fx-text-fill: " + TEXT_MUTED + ";" +
-                        "-fx-padding: 12 14 12 14;"
-        );
-        placeholder.setWrapText(true);
-
-        StackPane wrapper = new StackPane(placeholder);
-        wrapper.setAlignment(Pos.TOP_LEFT);
-        wrapper.setStyle("-fx-background-color: transparent;");
-        VBox.setVgrow(wrapper, Priority.ALWAYS);
-        return wrapper;
+        registersView = new RegistersView(simulator.getState());
+        VBox.setVgrow(registersView, Priority.ALWAYS);
+        return registersView;
     }
 
     private Node buildFlagsContent() {

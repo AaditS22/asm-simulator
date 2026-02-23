@@ -221,7 +221,7 @@ public class StackView extends VBox {
             boolean isRbp     = (addr == rbp);
             boolean isChanged = changedIdx.contains(di);
 
-            addrLabels[dr].setText(addrRelative ? relAddr(addr, rsp) : rawAddr(addr));
+            addrLabels[dr].setText(addrRelative ? relAddr(addr, rbp) : rawAddr(addr));
             setValueLabel(valLabels[dr], val, isChanged);
             setBadges(badgeBoxes[dr], isRsp, isRbp);
             setRowBg(dr, isRsp, isRbp, isChanged);
@@ -454,11 +454,11 @@ public class StackView extends VBox {
         render(false);
     }
 
-    private static String relAddr(long addr, long rsp) {
-        long diff = addr - rsp;
-        if (diff == 0) return "rsp";
-        if (diff > 0)  return "rsp+" + diff;
-        return "rsp" + diff;
+    private static String relAddr(long addr, long rbp) {
+        long diff = addr - rbp;
+        if (diff == 0) return "rbp";
+        if (diff > 0)  return "rbp+" + diff;
+        return "rbp" + diff;
     }
 
     private static String rawAddr(long addr) {
