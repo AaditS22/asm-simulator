@@ -133,12 +133,14 @@ public class MemoryOperand implements Operand {
     @Override
     public long getValue(CPUState state, LabelManager labelManager, Size operationSize) {
         long address = calculateAddress(state, labelManager);
+        state.getMemory().trackAddress(address, "Address tracked from operand: " + toAssemblyString());
         return state.getMemory().readN(address, operationSize.getBytes());
     }
 
     @Override
     public void setValue(CPUState state, LabelManager labelManager, long value, Size operationSize) {
         long address = calculateAddress(state, labelManager);
+        state.getMemory().trackAddress(address, "Address tracked from operand: " + toAssemblyString());
         state.getMemory().writeN(address, value, operationSize.getBytes());
     }
 

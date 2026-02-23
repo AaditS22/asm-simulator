@@ -93,6 +93,14 @@ public class LabelManager {
     }
 
     /**
+     * Gets all data labels mapped by their name.
+     * @return a map of data label names to DataLabel objects
+     */
+    public Map<String, DataLabel> getDataLabels() {
+        return dataLabels;
+    }
+
+    /**
      * Resets the label manager by clearing all stored labels.
      */
     public void reset() {

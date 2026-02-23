@@ -1,11 +1,15 @@
 package io.github.AaditS22.asmsimulator.backend.cpu;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 public class Memory {
     private final Map<Long, Byte> data = new HashMap<>();
     private final Map<String, Long> registers;
+    private final Set<Long> accessedAddresses = new HashSet<>();
+    private final Map<Long, String> trackedReasons = new HashMap<>();
 
     // Reference to the starting address of the user's stack view (not %rsp or %rbp)
     private Long stackViewStart;
@@ -189,5 +193,36 @@ public class Memory {
     public void clearMemory() {
         data.clear();
         stackViewStart = 0x7FFFFFFFF000L;
+        accessedAddresses.clear();
+        trackedReasons.clear();
+    }
+
+    /**
+     * Gets all the addresses that have been accessed
+     * @return a set of all the accessed addresses
+     */
+    public Set<Long> getAccessedAddresses() {
+        return accessedAddresses;
+    }
+
+    /**
+     * Gets the reasons for tracking an address
+     * @return a map of addresses and their reasons
+     */
+    public Map<Long, String> getTrackedReasons() {
+        return trackedReasons;
+    }
+
+    /**
+     * Tracks an address for the UI
+     * @param address the address to track
+     * @param reason the reason for tracking it
+     */
+    public void trackAddress(long address, String reason) {
+        if (address < 0x700000000000L) {
+            accessedAddresses.add(address);
+            trackedReasons.put(address, reason);
+        }
+
     }
 }
