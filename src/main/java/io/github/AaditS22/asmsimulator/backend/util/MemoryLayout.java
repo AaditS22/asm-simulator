@@ -6,9 +6,9 @@ public class MemoryLayout {
     //      the sake of visualization
     public static final long CODE_BASE    = 0x400000L;
     public static final long READ_ONLY_DATA_BASE  = 0x600000L;
-    public static final long DATA_BASE    = 0x601000L;
-    public static final long BSS_BASE     = 0x602000L;
-    public static final long HEAP_BASE    = 0x603000L;
+    public static final long DATA_BASE    = 0x800000L;
+    public static final long BSS_BASE     = 0xA00000L;
+    public static final long HEAP_BASE    = 0xC00000L;
     public static final long STACK_BASE   = 0x7FFFFFFFF000L;
 
     public static final long CODE_LIMIT           = READ_ONLY_DATA_BASE;
