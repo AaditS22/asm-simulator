@@ -1,6 +1,7 @@
 package io.github.AaditS22.asmsimulator.frontend;
 
 import io.github.AaditS22.asmsimulator.backend.Simulator;
+import io.github.AaditS22.asmsimulator.backend.instructions.Instruction;
 import io.github.AaditS22.asmsimulator.backend.util.StepResult;
 import io.github.AaditS22.asmsimulator.frontend.util.AsmHighlighter;
 import io.github.AaditS22.asmsimulator.frontend.util.ConfirmDialog;
@@ -12,6 +13,7 @@ import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.Slider;
 import javafx.scene.control.TextField;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.HBox;
@@ -45,8 +47,6 @@ public class SimulatorView extends VBox {
     private static final String RED_BORDER    = "#913B36";
     private static final String RED_TEXT      = "#FF9B94";
 
-    private static final String HIGHLIGHT_BG     = "#2E2910";
-    private static final String HIGHLIGHT_BORDER = "#7A5820";
     private static final String ACTIVE_LINE_BG = "#16537E";
 
     private static final String TERMINAL_BG    = "#141618";
@@ -128,8 +128,19 @@ public class SimulatorView extends VBox {
     private Label instructionDescLabel;
     private Label instructionTagLabel;
     private boolean terminalInputActive = false;
+
+    // Execution Controls
     private Button stepBtn;
     private Button restartBtn;
+    private Button autoPlayBtn;
+    private Button runToEndBtn;
+    private Slider speedSlider;
+
+    // Concurrency states
+    private volatile boolean isAutoPlaying = false;
+    private volatile boolean isRunningToEnd = false;
+    private Thread executionThread;
+
     private final Simulator simulator = new Simulator();
     private boolean parseSuccess = false;
     private final StringBuilder terminalContent = new StringBuilder();
@@ -155,11 +166,12 @@ public class SimulatorView extends VBox {
         VBox.setVgrow(this, Priority.ALWAYS);
 
         HBox titleBar    = buildTitleBar();
+        HBox controlBar  = buildControlBar();
         HBox mainContent = buildMainContent();
         VBox terminal    = buildTerminal();
 
         VBox.setVgrow(mainContent, Priority.ALWAYS);
-        getChildren().addAll(titleBar, mainContent, terminal);
+        getChildren().addAll(titleBar, controlBar, mainContent, terminal);
         initSimulator();
     }
 
@@ -168,11 +180,11 @@ public class SimulatorView extends VBox {
     private HBox buildTitleBar() {
         HBox bar = new HBox(0);
         bar.setAlignment(Pos.CENTER_LEFT);
-        bar.setPrefHeight(42);
+        bar.setPrefHeight(40);
+        bar.setMinHeight(40);
+        VBox.setVgrow(bar, Priority.NEVER);
         bar.setStyle(
-                "-fx-background-color: " + BG_PANEL + ";" +
-                        "-fx-border-color: transparent transparent " + BORDER_SOFT + " transparent;" +
-                        "-fx-border-width: 1;"
+                "-fx-background-color: " + BG_PANEL + ";"
         );
 
         HBox brandBox = buildBrand();
@@ -181,15 +193,10 @@ public class SimulatorView extends VBox {
         Region leftSpacer = new Region();
         HBox.setHgrow(leftSpacer, Priority.ALWAYS);
 
-        HBox controls = buildControlButtons();
-
-        Region rightSpacer = new Region();
-        HBox.setHgrow(rightSpacer, Priority.ALWAYS);
-
         HBox windowBtns = buildWindowButtons();
         HBox.setMargin(windowBtns, new Insets(0, 12, 0, 0));
 
-        bar.getChildren().addAll(brandBox, leftSpacer, controls, rightSpacer, windowBtns);
+        bar.getChildren().addAll(brandBox, leftSpacer, windowBtns);
         return bar;
     }
 
@@ -217,38 +224,6 @@ public class SimulatorView extends VBox {
         return brand;
     }
 
-    private HBox buildControlButtons() {
-        restartBtn = new Button("⟳  Restart");
-        restartBtn.setStyle(BTN_SECONDARY);
-        restartBtn.setOnMouseEntered(e -> restartBtn.setStyle(BTN_SECONDARY_HOVER));
-        restartBtn.setOnMouseExited(e -> restartBtn.setStyle(BTN_SECONDARY));
-        restartBtn.setOnAction(e -> handleReset());
-
-        stepBtn = new Button("Step  ▶");
-        stepBtn.setStyle(BTN_PRIMARY);
-        stepBtn.setOnMouseEntered(e -> { if (!stepBtn.isDisabled()) stepBtn.setStyle(BTN_PRIMARY_HOVER); });
-        stepBtn.setOnMouseExited(e -> { if (!stepBtn.isDisabled()) stepBtn.setStyle(BTN_PRIMARY); });
-        stepBtn.setOnAction(e -> handleStep());
-
-        stepCounterLabel = new Label("step  0");
-        stepCounterLabel.setStyle(
-                "-fx-font-family: " + MONO + ";" +
-                        "-fx-font-size: 10.5;" +
-                        "-fx-text-fill: " + TEXT_MUTED + ";" +
-                        "-fx-padding: 0 4 0 4;"
-        );
-
-        Region divider = new Region();
-        divider.setPrefWidth(1);
-        divider.setPrefHeight(18);
-        divider.setStyle("-fx-background-color: " + BORDER_SOFT + ";");
-        HBox.setMargin(divider, new Insets(0, 4, 0, 4));
-
-        HBox controls = new HBox(8, restartBtn, stepBtn, divider, stepCounterLabel);
-        controls.setAlignment(Pos.CENTER);
-        return controls;
-    }
-
     private HBox buildWindowButtons() {
         Label backBtn = new Label("← Editor");
         backBtn.setPadding(new Insets(4, 12, 4, 12));
@@ -269,7 +244,10 @@ public class SimulatorView extends VBox {
         backBtn.setStyle(backDefault);
         backBtn.setOnMouseEntered(e -> backBtn.setStyle(backHover));
         backBtn.setOnMouseExited(e -> backBtn.setStyle(backDefault));
-        backBtn.setOnMouseClicked(e -> onBack.run());
+        backBtn.setOnMouseClicked(e -> {
+            stopAutomatedExecution();
+            onBack.run();
+        });
 
         Label closeBtn = new Label("✕");
         closeBtn.setPadding(new Insets(4, 10, 4, 10));
@@ -292,6 +270,7 @@ public class SimulatorView extends VBox {
         closeBtn.setOnMouseExited(e -> closeBtn.setStyle(closeDefault));
         closeBtn.setOnMouseClicked(e -> {
             if (ConfirmDialog.show(getScene().getWindow(), "Are you sure you want to close the application?")) {
+                stopAutomatedExecution();
                 ((Stage) getScene().getWindow()).close();
             }
         });
@@ -299,6 +278,72 @@ public class SimulatorView extends VBox {
         HBox windowBtns = new HBox(6, backBtn, closeBtn);
         windowBtns.setAlignment(Pos.CENTER_RIGHT);
         return windowBtns;
+    }
+
+    // ── Execution Control Bar ─────────────────────────────────────────────────
+
+    private HBox buildControlBar() {
+        HBox bar = new HBox(12);
+        bar.setAlignment(Pos.CENTER_LEFT);
+        bar.setPadding(new Insets(8, 16, 8, 16));
+        bar.setStyle(
+                "-fx-background-color: " + BG_EDITOR + ";" +
+                        "-fx-border-color: transparent transparent " + BORDER_SOFT + " transparent;" +
+                        "-fx-border-width: 1;"
+        );
+
+        restartBtn = new Button("⟳ Restart");
+        restartBtn.setStyle(BTN_SECONDARY);
+        restartBtn.setOnMouseEntered(e -> restartBtn.setStyle(BTN_SECONDARY_HOVER));
+        restartBtn.setOnMouseExited(e -> restartBtn.setStyle(BTN_SECONDARY));
+        restartBtn.setOnAction(e -> handleReset());
+
+        stepBtn = new Button("Step ▶");
+        stepBtn.setStyle(BTN_PRIMARY);
+        stepBtn.setOnMouseEntered(e -> {
+            if (!stepBtn.isDisabled()) stepBtn.setStyle(BTN_PRIMARY_HOVER); });
+        stepBtn.setOnMouseExited(e -> {
+            if (!stepBtn.isDisabled()) stepBtn.setStyle(BTN_PRIMARY); });
+        stepBtn.setOnAction(e -> handleStep());
+
+        autoPlayBtn = new Button("Autoplay ▶▶");
+        autoPlayBtn.setStyle(BTN_SECONDARY);
+        autoPlayBtn.setOnMouseEntered(e -> {
+            if (!autoPlayBtn.isDisabled()) autoPlayBtn.setStyle(BTN_SECONDARY_HOVER); });
+        autoPlayBtn.setOnMouseExited(e -> {
+            if (!autoPlayBtn.isDisabled()) autoPlayBtn.setStyle(BTN_SECONDARY); });
+        autoPlayBtn.setOnAction(e -> toggleAutoPlay());
+
+        Label speedLabel = new Label("Delay:");
+        speedLabel.setStyle("-fx-text-fill: " + TEXT_MUTED + "; -fx-font-family: " + SANS + ";");
+
+        speedSlider = new Slider(10, 1000, 250);
+        speedSlider.setPrefWidth(100);
+
+        HBox autoPlayBox = new HBox(8, autoPlayBtn, speedLabel, speedSlider);
+        autoPlayBox.setAlignment(Pos.CENTER_LEFT);
+
+        runToEndBtn = new Button("Run to End ⏭");
+        runToEndBtn.setStyle(BTN_SECONDARY);
+        runToEndBtn.setOnMouseEntered(e -> {
+            if (!runToEndBtn.isDisabled()) runToEndBtn.setStyle(BTN_SECONDARY_HOVER); });
+        runToEndBtn.setOnMouseExited(e -> {
+            if (!runToEndBtn.isDisabled()) runToEndBtn.setStyle(BTN_SECONDARY); });
+        runToEndBtn.setOnAction(e -> handleRunToEnd());
+
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+
+        stepCounterLabel = new Label("step  0");
+        stepCounterLabel.setStyle(
+                "-fx-font-family: " + MONO + ";" +
+                        "-fx-font-size: 11.5;" +
+                        "-fx-text-fill: " + TEXT_MUTED + ";" +
+                        "-fx-padding: 0 4 0 4;"
+        );
+
+        bar.getChildren().addAll(restartBtn, stepBtn, autoPlayBox, runToEndBtn, spacer, stepCounterLabel);
+        return bar;
     }
 
     // ── Main Content ──────────────────────────────────────────────────────────
@@ -444,12 +489,10 @@ public class SimulatorView extends VBox {
                         "-fx-border-width: 2 0 0 0;"
         );
 
-        // ── Header row ──
         HBox headerRow = new HBox(8);
         headerRow.setAlignment(Pos.CENTER_LEFT);
         headerRow.setPadding(new Insets(8, 14, 6, 14));
 
-        // Small amber pill tag
         instructionTagLabel = new Label("AWAITING EXECUTION");
         instructionTagLabel.setPadding(new Insets(2, 8, 2, 8));
         instructionTagLabel.setStyle(
@@ -469,14 +512,10 @@ public class SimulatorView extends VBox {
         HBox.setHgrow(headerSpacer, Priority.ALWAYS);
 
         Label icon = new Label("⚙");
-        icon.setStyle(
-                "-fx-font-size: 11;" +
-                        "-fx-text-fill: #3A3010;"
-        );
+        icon.setStyle("-fx-font-size: 11; -fx-text-fill: #3A3010;");
 
         headerRow.getChildren().addAll(instructionTagLabel, headerSpacer, icon);
 
-        // ── Description label ──
         instructionDescLabel = new Label("A simple explanation of each executed instruction " +
                 "will be visible here");
         instructionDescLabel.setWrapText(true);
@@ -509,13 +548,11 @@ public class SimulatorView extends VBox {
     }
 
     private HBox buildMainPaneRow() {
-        // Stack spans the full height on the left
         VBox stackPane = buildPane("Stack", buildStackContent(), true);
         stackPane.setMinWidth(260);
         stackPane.setPrefWidth(280);
         stackPane.setMaxWidth(320);
 
-        // Right column: Registers+Flags on top (shorter), Memory on bottom (larger)
         VBox rightColumn = buildRightColumn();
         HBox.setHgrow(rightColumn, Priority.ALWAYS);
 
@@ -527,9 +564,9 @@ public class SimulatorView extends VBox {
 
     private VBox buildRightColumn() {
         HBox topRow = buildTopPaneRow();
-        topRow.setMinHeight(350);
-        topRow.setPrefHeight(400);
-        topRow.setMaxHeight(400);
+        topRow.setMinHeight(310);
+        topRow.setPrefHeight(350);
+        topRow.setMaxHeight(350);
 
         Region rowGap = new Region();
         rowGap.setPrefHeight(12);
@@ -603,7 +640,7 @@ public class SimulatorView extends VBox {
             parseSuccess = false;
             String msg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
             setTerminalError(msg);
-            disableStepButton();
+            setControlsEnabled(false);
             scheduleParseErrorPopup(msg);
         }
     }
@@ -680,16 +717,16 @@ public class SimulatorView extends VBox {
         });
     }
 
+    // ── Execution Logic ───────────────────────────────────────────────────────
+
     private void handleStep() {
         if (!parseSuccess || simulator.isHalted()) return;
 
         try {
+            Instruction currentInst = simulator.getCurrentInstruction();
+            String mnemonic = currentInst != null ? currentInst.getMnemonic().toUpperCase() : "INSTRUCTION";
 
-            String mnemonic = simulator.getCurrentInstruction() != null
-                    ? simulator.getCurrentInstruction().getMnemonic().toUpperCase()
-                    : "INSTRUCTION";
             StepResult result = simulator.step();
-
             setStepCount(currentStep + 1);
             setInstructionDescription(result.description(), mnemonic);
 
@@ -697,25 +734,16 @@ public class SimulatorView extends VBox {
                 appendTerminalOutput(result.output(), TERMINAL_WHITE);
             }
 
-            if (stackView != null) stackView.update(simulator.getState());
-            if (registersView != null) registersView.update(simulator.getState());
-            if (flagsView != null) flagsView.update(simulator.getState());
-            if (memoryView != null) memoryView.update(simulator.getState());
+            updateViewPanels();
 
             if (simulator.isHalted()) {
-                long exitCode = simulator.getExitCode();
-                if (exitCode == 0) {
-                    appendTerminalOutput("\n[Program exited with code " + exitCode + "]", TERMINAL_GREEN);
-                } else {
-                    appendTerminalOutput("\n[Program exited with code " + exitCode + "]", RED_TEXT);
-                }
-                clearHighlight();
-                disableStepButton();
+                handleHalt();
                 return;
             }
 
             if (simulator.isWaitingForInput()) {
-                disableStepButton();
+                stopAutomatedExecution();
+                setControlsEnabled(false);
                 activateTerminalInput();
                 return;
             }
@@ -723,14 +751,156 @@ public class SimulatorView extends VBox {
             highlightCurrentInstruction();
 
         } catch (Exception e) {
+            stopAutomatedExecution();
             String msg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
             appendTerminalError("\nError: " + msg);
             clearHighlight();
-            disableStepButton();
+            setControlsEnabled(false);
+        }
+    }
+
+    private void toggleAutoPlay() {
+        if (isAutoPlaying) {
+            stopAutomatedExecution();
+        } else {
+            if (simulator.isHalted() || simulator.isWaitingForInput()) return;
+            isAutoPlaying = true;
+            stepBtn.setDisable(true);
+            runToEndBtn.setDisable(true);
+            autoPlayBtn.setText("Pause ⏸");
+            autoPlayBtn.setStyle(BTN_PRIMARY);
+
+            executionThread = new Thread(() -> {
+                while (isAutoPlaying && !simulator.isHalted() && !simulator.isWaitingForInput()) {
+                    Platform.runLater(this::handleStep);
+                    try {
+                        Thread.sleep((long) speedSlider.getValue());
+                    } catch (InterruptedException e) {
+                        break;
+                    }
+                }
+                Platform.runLater(this::stopAutomatedExecution);
+            });
+            executionThread.setDaemon(true);
+            executionThread.start();
+        }
+    }
+
+    private void handleRunToEnd() {
+        if (!parseSuccess || simulator.isHalted() || simulator.isWaitingForInput()) return;
+
+        isRunningToEnd = true;
+        setControlsEnabled(false);
+        runToEndBtn.setText("Running...");
+
+        executionThread = new Thread(() -> {
+            StringBuilder batchedOutput = new StringBuilder();
+            int batchSteps = 0;
+            String lastMnemonic = "";
+            String lastDesc = "";
+
+            while (isRunningToEnd && !simulator.isHalted() && !simulator.isWaitingForInput()) {
+                try {
+                    Instruction currentInst = simulator.getCurrentInstruction();
+                    lastMnemonic = currentInst != null ? currentInst.getMnemonic().toUpperCase() : "INSTRUCTION";
+
+                    StepResult result = simulator.step();
+                    currentStep++;
+                    lastDesc = result.description();
+
+                    if (result.hasOutput()) {
+                        batchedOutput.append(result.output());
+                    }
+
+                    batchSteps++;
+
+                    // Flush to UI every 1000 steps or if halting/waiting to prevent freezing infinite loops
+                    if (batchSteps >= 1000 || simulator.isHalted() || simulator.isWaitingForInput()) {
+                        String out = batchedOutput.toString();
+                        batchedOutput.setLength(0);
+                        batchSteps = 0;
+                        int stepSnapshot = currentStep;
+                        String descSnapshot = lastDesc;
+                        String mnemonicSnapshot = lastMnemonic;
+
+                        // Take a snapshot of the status to prevent race conditions in the UI thread
+                        boolean haltedSnapshot = simulator.isHalted();
+                        boolean waitingSnapshot = simulator.isWaitingForInput();
+
+                        Platform.runLater(() -> {
+                            if (!out.isEmpty()) appendTerminalOutput(out, TERMINAL_WHITE);
+                            setStepCount(stepSnapshot);
+                            setInstructionDescription(descSnapshot, mnemonicSnapshot);
+
+                            // Only update heavy memory/register UI if the run actually stops
+                            if (haltedSnapshot || waitingSnapshot) {
+                                updateViewPanels();
+                                highlightCurrentInstruction();
+
+                                if (haltedSnapshot) {
+                                    handleHalt();
+                                } else {
+                                    isRunningToEnd = false;
+                                    activateTerminalInput();
+                                }
+                            }
+                        });
+                    }
+                } catch (Exception e) {
+                    String msg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
+                    Platform.runLater(() -> {
+                        appendTerminalError("\nError: " + msg);
+                        clearHighlight();
+                    });
+                    break;
+                }
+            }
+            Platform.runLater(this::stopAutomatedExecution);
+        });
+        executionThread.setDaemon(true);
+        executionThread.start();
+    }
+
+    private void stopAutomatedExecution() {
+        isAutoPlaying = false;
+        isRunningToEnd = false;
+        if (executionThread != null && executionThread.isAlive()) {
+            executionThread.interrupt();
+        }
+
+        Platform.runLater(() -> {
+            autoPlayBtn.setText("Autoplay ▶▶");
+            autoPlayBtn.setStyle(BTN_SECONDARY);
+            runToEndBtn.setText("Run to End ⏭");
+            runToEndBtn.setStyle(BTN_SECONDARY);
+
+            if (!simulator.isHalted() && !simulator.isWaitingForInput()) {
+                setControlsEnabled(true);
+            }
+        });
+    }
+
+    private void updateViewPanels() {
+        if (stackView != null) stackView.update(simulator.getState());
+        if (registersView != null) registersView.update(simulator.getState());
+        if (flagsView != null) flagsView.update(simulator.getState());
+        if (memoryView != null) memoryView.update(simulator.getState());
+    }
+
+    private void handleHalt() {
+        stopAutomatedExecution();
+        setControlsEnabled(false);
+        clearHighlight();
+        long exitCode = simulator.getExitCode();
+        if (exitCode == 0) {
+            appendTerminalOutput("\n[Program exited with code " + exitCode + "]", TERMINAL_GREEN);
+        } else {
+            appendTerminalOutput("\n[Program exited with code " + exitCode + "]", RED_TEXT);
         }
     }
 
     private void handleReset() {
+        stopAutomatedExecution();
         if (!parseSuccess) return;
         try {
             simulator.reset();
@@ -738,10 +908,13 @@ public class SimulatorView extends VBox {
             setTerminalOutput("Reset. Ready to simulate.");
             setInstructionDescription(null, null);
             setStepCount(0);
-            enableStepButton();
+            setControlsEnabled(true);
+
             if (terminalInputActive) deactivateTerminalInput();
+
             instructionLineMap = buildInstructionLineMap();
             highlightCurrentInstruction();
+
             if (stackView != null) stackView.reset(simulator.getState());
             if (registersView != null) registersView.reset(simulator.getState());
             if (flagsView != null) flagsView.reset(simulator.getState());
@@ -763,23 +936,15 @@ public class SimulatorView extends VBox {
             return;
         }
         deactivateTerminalInput();
-        enableStepButton();
+        setControlsEnabled(true);
+        // Process the instruction that was waiting for input
         handleStep();
     }
 
-    private void disableStepButton() {
-        if (stepBtn == null) return;
-        stepBtn.setDisable(true);
-        stepBtn.setOnMouseEntered(null);
-        stepBtn.setOnMouseExited(null);
-    }
-
-    private void enableStepButton() {
-        if (stepBtn == null) return;
-        stepBtn.setDisable(false);
-        stepBtn.setOnMouseEntered(e -> stepBtn.setStyle(BTN_PRIMARY_HOVER));
-        stepBtn.setOnMouseExited(e -> stepBtn.setStyle(BTN_PRIMARY));
-        stepBtn.setStyle(BTN_PRIMARY);
+    private void setControlsEnabled(boolean enabled) {
+        if (stepBtn != null) stepBtn.setDisable(!enabled);
+        if (autoPlayBtn != null) autoPlayBtn.setDisable(!enabled);
+        if (runToEndBtn != null) runToEndBtn.setDisable(!enabled);
     }
 
     private void scheduleParseErrorPopup(String errorMessage) {
