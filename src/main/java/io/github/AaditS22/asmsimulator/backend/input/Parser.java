@@ -91,6 +91,14 @@ public class Parser {
                 }
                 if (line.isEmpty()) continue;
                 if (line.startsWith(".")) {
+                    if (currentSection == Section.TEXT) {
+                        String directiveName = line.split("\\s+")[0];
+                        throw new IllegalArgumentException(
+                                "This simulator does not support data directives like '" + directiveName +
+                                        "' inside the .text section. Please move your data to the .data or" +
+                                        " .rodata section.");
+                    }
+
                     long currentAddr = getCurrentAddress(currentSection, textAddr, dataAddr, rodataAddr, bssAddr);
                     int size = computeDirectiveSize(line, currentAddr);
                     flushPendingLabels(pendingDataLabels, labelManager, currentAddr, size);
@@ -378,7 +386,9 @@ public class Parser {
                     throw new IllegalArgumentException("Invalid alignment value: " + args);
                 }
             }
-            default -> 0;
+            default -> throw new IllegalArgumentException("The directive '" + directive + "' is either invalid" +
+                    " or not supported (yet)! If you are trying to use .include, replace it with the actual code from" +
+                    " the file being included.");
         };
     }
 
