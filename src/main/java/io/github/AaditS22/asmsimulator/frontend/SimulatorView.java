@@ -171,7 +171,39 @@ public class SimulatorView extends VBox {
         VBox terminal    = buildTerminal();
 
         VBox.setVgrow(mainContent, Priority.ALWAYS);
-        getChildren().addAll(titleBar, controlBar, mainContent, terminal);
+
+        // ── Terminal Resizer Handle ──
+        HBox resizer = new HBox();
+        resizer.setAlignment(Pos.CENTER);
+        resizer.setMinHeight(8);
+        resizer.setPrefHeight(8);
+        resizer.setMaxHeight(8);
+        resizer.setStyle("-fx-background-color: " + BG_BASE + "; -fx-cursor: v-resize;");
+
+        Region handle = new Region();
+        handle.setPrefWidth(40);
+        handle.setPrefHeight(3);
+        handle.setMaxHeight(3);
+        handle.setStyle("-fx-background-color: " + BORDER_SOFT + "; -fx-background-radius: 2;");
+        resizer.getChildren().add(handle);
+
+        resizer.setOnMouseEntered(e -> handle.setStyle("-fx-background-color: " + AMBER +
+                "; -fx-background-radius: 2;"));
+        resizer.setOnMouseExited(e -> handle.setStyle("-fx-background-color: " + BORDER_SOFT +
+                "; -fx-background-radius: 2;"));
+
+        resizer.setOnMouseDragged(e -> {
+            double newHeight = this.getHeight() - e.getSceneY();
+            if (newHeight < 145) newHeight = 145;
+
+            double maxAllowed = this.getHeight() - 250;
+            if (newHeight > maxAllowed) newHeight = maxAllowed;
+
+            terminal.setPrefHeight(newHeight);
+            terminal.setMinHeight(newHeight);
+        });
+
+        getChildren().addAll(titleBar, controlBar, mainContent, resizer, terminal);
         initSimulator();
     }
 
@@ -1014,7 +1046,7 @@ public class SimulatorView extends VBox {
         terminalPane = new VBox(0);
         terminalPane.setPrefHeight(175);
         terminalPane.setMinHeight(145);
-        terminalPane.setMaxHeight(240);
+        terminalPane.setMaxHeight(Double.MAX_VALUE);
         terminalPane.setStyle(
                 "-fx-background-color: " + TERMINAL_BG + ";" +
                         "-fx-border-color: " + BORDER_SOFT + " transparent transparent transparent;" +
