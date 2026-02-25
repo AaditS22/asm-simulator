@@ -37,6 +37,6 @@ pom.xml.next
 release.properties
 
 # React files
-frontend/node_modules/
-frontend/dist/
-frontend/.env.local
+web/node_modules/
+web/dist/
+web/.env.local
