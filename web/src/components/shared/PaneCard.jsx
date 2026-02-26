@@ -1,3 +1,4 @@
+import React from 'react'
 export default function PaneCard({ title, children, style, headerRight }) {
     return (
         <div
