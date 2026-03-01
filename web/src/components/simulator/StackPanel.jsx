@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useLayoutEffect } from 'react'
 import { api } from '../../api/client'
 
 const ROWS = 10
@@ -19,9 +19,7 @@ function toHex(v) {
     const n = typeof v === 'bigint' ? v : BigInt(v)
     if (n < 0n) return '-0x' + (-n).toString(16).toUpperCase()
     let hex = n.toString(16).toUpperCase()
-    if (hex.length > 8) {
-        return '…' + hex.slice(-7)
-    }
+    if (hex.length > 8) return '…' + hex.slice(-7)
     return '0x' + hex
 }
 
@@ -29,9 +27,7 @@ function formatRawAddr(addrRaw) {
     if (addrRaw === 0 || addrRaw === 0n) return '0x0'
     const n = typeof addrRaw === 'bigint' ? addrRaw : BigInt(addrRaw)
     let s = n.toString(16).toUpperCase()
-    if (s.length > 8) {
-        return '…' + s.slice(-7)
-    }
+    if (s.length > 8) return '…' + s.slice(-7)
     return '0x' + s
 }
 
@@ -64,25 +60,34 @@ export default function StackPanel({ state }) {
     const [addrRelative, setAddrRelative] = useState(true)
     const [valHex, setValHex] = useState(true)
     const prevValues = useRef({})
+    const prevStepCount = useRef(-1)
     const [changedAddrs, setChangedAddrs] = useState(new Set())
 
     const stack = state?.stack || []
     const rbp = state?.registers?.rbp ?? 0
 
-    useEffect(() => {
+    useLayoutEffect(() => {
         if (stack.length === 0) return
+
         if (state?.stepCount === 0) {
             setChangedAddrs(new Set())
             const m = {}
             for (const r of stack) { if (r) m[r.addressRaw] = r.value }
             prevValues.current = m
+            prevStepCount.current = 0
             return
         }
+
+        const stepChanged = state?.stepCount !== prevStepCount.current
+        prevStepCount.current = state?.stepCount ?? prevStepCount.current
+
         const changed = new Set()
         for (const r of stack) {
             if (!r) continue
             const prev = prevValues.current[r.addressRaw]
-            if (prev !== undefined && prev !== r.value) {
+            if (prev === undefined) {
+                if (stepChanged) changed.add(r.addressRaw)
+            } else if (prev !== r.value) {
                 changed.add(r.addressRaw)
             }
             prevValues.current[r.addressRaw] = r.value
@@ -152,7 +157,6 @@ export default function StackPanel({ state }) {
 
     return (
         <div className="flex flex-col flex-1 h-full min-h-0">
-            {/* Row 1: Up, Flip, Down */}
             <div className="flex gap-1 px-2.5 pt-2 pb-1" style={{ backgroundColor: '#3C3F41' }}>
                 <BtnSmall onClick={() => scrollStack(1)}>↑&nbsp;&nbsp;Up</BtnSmall>
                 <ToggleLbl onClick={() => setReversed(!reversed)}>
@@ -161,7 +165,6 @@ export default function StackPanel({ state }) {
                 <BtnSmall onClick={() => scrollStack(-1)}>↓&nbsp;&nbsp;Down</BtnSmall>
             </div>
 
-            {/* Row 2: Addr mode, Value mode */}
             <div className="flex gap-1 px-2.5 pb-2" style={{ backgroundColor: '#3C3F41' }}>
                 <ToggleLbl onClick={() => setAddrRelative(!addrRelative)}>
                     Addr: {addrRelative ? 'Relative' : 'Raw'}
@@ -171,7 +174,6 @@ export default function StackPanel({ state }) {
                 </ToggleLbl>
             </div>
 
-            {/* Table Header */}
             <div
                 className="flex items-center gap-1.5 px-2.5 py-[3px]"
                 style={{ backgroundColor: '#272829', borderBottom: '1px solid #424547' }}
@@ -184,7 +186,6 @@ export default function StackPanel({ state }) {
                 </span>
             </div>
 
-            {/* Rows - Converted to flex column with flex-1 on rows so they stretch/shrink */}
             <div className="flex-1 overflow-hidden flex flex-col min-h-0">
                 {Array.from({ length: ROWS }).map((_, dr) => {
                     const di = reversed ? (ROWS - 1 - dr) : dr
@@ -196,7 +197,7 @@ export default function StackPanel({ state }) {
                         </div>
                     )
 
-                    const isChanged = row && changedAddrs.has(row.addressRaw)
+                    const isChanged = changedAddrs.has(row.addressRaw)
                     const bg = getRowBg(dr, row.isRsp, row.isRbp, isChanged)
                     const addrText = addrRelative ? relAddr(row.addressRaw, rbp) : formatRawAddr(row.addressRaw)
                     const valText = valHex ? toHex(row.value) : toDecSigned(row.value)
@@ -217,7 +218,6 @@ export default function StackPanel({ state }) {
                 })}
             </div>
 
-            {/* Legend */}
             <div className="flex items-center gap-2.5 px-2.5 py-1.5" style={{ backgroundColor: '#272829' }}>
                 <div className="flex items-center gap-1">
                     <Badge text="RSP" fg={RSP_FG} bg={RSP_BG} bdr={RSP_BDR} />
