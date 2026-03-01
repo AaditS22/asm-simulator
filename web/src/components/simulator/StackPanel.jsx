@@ -63,27 +63,31 @@ export default function StackPanel({ state }) {
     const [reversed, setReversed] = useState(false)
     const [addrRelative, setAddrRelative] = useState(true)
     const [valHex, setValHex] = useState(true)
-    const prevValues = useRef([])
-    const [changedIdx, setChangedIdx] = useState(new Set())
+    const prevValues = useRef({})
+    const [changedAddrs, setChangedAddrs] = useState(new Set())
 
     const stack = state?.stack || []
     const rbp = state?.registers?.rbp ?? 0
 
     useEffect(() => {
         if (stack.length === 0) return
-        const changed = new Set()
         if (state?.stepCount === 0) {
-            setChangedIdx(new Set())
-            prevValues.current = stack.map(r => r?.value)
+            setChangedAddrs(new Set())
+            const m = {}
+            for (const r of stack) { if (r) m[r.addressRaw] = r.value }
+            prevValues.current = m
             return
         }
-        for (let i = 0; i < stack.length; i++) {
-            if (prevValues.current[i] !== undefined && prevValues.current[i] !== stack[i]?.value) {
-                changed.add(i)
+        const changed = new Set()
+        for (const r of stack) {
+            if (!r) continue
+            const prev = prevValues.current[r.addressRaw]
+            if (prev !== undefined && prev !== r.value) {
+                changed.add(r.addressRaw)
             }
+            prevValues.current[r.addressRaw] = r.value
         }
-        setChangedIdx(changed)
-        prevValues.current = stack.map(r => r?.value)
+        setChangedAddrs(changed)
     }, [stack, state?.stepCount])
 
     async function scrollStack(direction) {
@@ -192,7 +196,7 @@ export default function StackPanel({ state }) {
                         </div>
                     )
 
-                    const isChanged = changedIdx.has(di)
+                    const isChanged = row && changedAddrs.has(row.addressRaw)
                     const bg = getRowBg(dr, row.isRsp, row.isRbp, isChanged)
                     const addrText = addrRelative ? relAddr(row.addressRaw, rbp) : formatRawAddr(row.addressRaw)
                     const valText = valHex ? toHex(row.value) : toDecSigned(row.value)
