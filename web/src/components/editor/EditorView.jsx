@@ -216,9 +216,11 @@ export default function EditorView({ code, onCodeChange }) {
         <div className="flex flex-col w-full h-full bg-bg-base">
             <TopBar
                 left={
-                    <span className="font-sans text-[12px] text-text-muted">
-                        x86-64 AT&T Assembly Simulator
-                    </span>
+                    <div className="flex items-center">
+                        <span className="font-sans text-[12px] font-bold text-amber">ASM SIM</span>
+                        <span className="font-sans text-[12px] mx-2" style={{ color: '#777777' }}>/</span>
+                        <span className="font-sans text-[12px] text-text-muted">Editor</span>
+                    </div>
                 }
                 right={
                     <button

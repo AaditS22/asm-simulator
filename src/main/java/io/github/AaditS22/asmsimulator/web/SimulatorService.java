@@ -25,6 +25,7 @@ import java.util.TreeSet;
 public class SimulatorService {
 
     private static final int RUN_STEP_LIMIT = 100_000;
+    private static final int STACK_ROWS = 10;
 
     private final Simulator simulator = new Simulator();
     private boolean loaded = false;
@@ -33,6 +34,7 @@ public class SimulatorService {
     private int stepCount = 0;
 
     private Map<Long, Long> lastMemoryValues = new LinkedHashMap<>();
+    private final Set<Long> manualTrackedAddresses = new TreeSet<>();
 
     /**
      * Loads the given code into the simulator and returns a response DTO.
@@ -47,6 +49,7 @@ public class SimulatorService {
             stepCount = 0;
             instructionLineMap = buildInstructionLineMap(code);
             lastMemoryValues.clear();
+            manualTrackedAddresses.clear();
             return new LoadResponseDto(true, null, buildState(false));
         } catch (Exception e) {
             loaded = false;
@@ -75,6 +78,7 @@ public class SimulatorService {
             StepResult result = simulator.step();
             stepCount++;
 
+            autoScrollStack();
             StateDto state = buildState(true);
             return new StepResponseDto(result.description(), mnemonic, result.output(),
                     result.hasOutput(), state, null);
@@ -114,6 +118,7 @@ public class SimulatorService {
                 if (result.description() != null) lastDesc = result.description();
             }
 
+            autoScrollStack();
             long exitCode = simulator.isHalted() ? simulator.getExitCode() : 0;
             return new RunResponseDto(outputBuf.toString(), lastDesc, lastMnemonic,
                     exitCode, buildState(true), null);
@@ -134,6 +139,7 @@ public class SimulatorService {
             stepCount = 0;
             instructionLineMap = buildInstructionLineMap(currentCode);
             lastMemoryValues.clear();
+            manualTrackedAddresses.clear();
             return buildState(false);
         } catch (Exception e) {
             return buildState(false);
@@ -167,7 +173,50 @@ public class SimulatorService {
         return buildState(false);
     }
 
-    // ── State building ──────────────────────────────────────────────────────
+    /**
+     * Scrolls the stack by the given direction.
+     * @param direction 1 for up, -1 for down
+     * @return The updated state after scrolling
+     */
+    public synchronized StateDto scrollStack(int direction) {
+        if (!loaded) return buildEmptyState();
+        Memory mem = simulator.getState().getMemory();
+        mem.setStackViewStart(mem.getStackViewStart() + direction * 8L);
+        return buildState(false);
+    }
+
+    /**
+     * Tracks a memory address for manual inspection.
+     * @param addressStr The memory address to track, in hexadecimal/decimal format
+     * @return The updated state after tracking the address
+     */
+    public synchronized StateDto trackMemoryAddress(String addressStr) {
+        if (!loaded) return buildEmptyState();
+        try {
+            long addr = addressStr.startsWith("0x")
+                    ? Long.parseLong(addressStr.substring(2), 16)
+                    : Long.parseLong(addressStr);
+            manualTrackedAddresses.add(addr);
+            return buildState(false);
+        } catch (NumberFormatException e) {
+            return buildState(false);
+        }
+    }
+
+    private void autoScrollStack() {
+        if (!loaded) return;
+        CPUState cpu = simulator.getState();
+        Memory mem = cpu.getMemory();
+        long rsp = cpu.getRegister("rsp", 8);
+        long viewStart = mem.getStackViewStart();
+        long viewEnd = viewStart - (long)(STACK_ROWS - 1) * 8;
+
+        if (rsp > viewStart) {
+            mem.setStackViewStart(rsp);
+        } else if (rsp < viewEnd) {
+            mem.setStackViewStart(rsp + (long)(STACK_ROWS - 1) * 8);
+        }
+    }
 
     private StateDto buildState(boolean detectChanges) {
         if (!loaded) return buildEmptyState();
@@ -263,6 +312,7 @@ public class SimulatorService {
         }
 
         addresses.addAll(mem.getAccessedAddresses());
+        addresses.addAll(manualTrackedAddresses);
 
         List<StateDto.MemoryEntryDto> entries = new ArrayList<>();
         for (Long addr : addresses) {
@@ -284,15 +334,12 @@ public class SimulatorService {
                     size, changed
             ));
         }
-
-        // Sort: changed first, then by address
-        entries.sort((a, b) -> {
-            if (a.changed() && !b.changed()) return -1;
-            if (!a.changed() && b.changed()) return 1;
-            return Long.compare(a.addressRaw(), b.addressRaw());
-        });
-
         return entries;
+    }
+
+    private String toHex(long v) {
+        if (v == 0) return "0x0";
+        return "0x" + Long.toHexString(v).toUpperCase();
     }
 
     private List<Integer> buildInstructionLineMap(String code) {
@@ -320,18 +367,16 @@ public class SimulatorService {
             if (line.equals(".data") || line.equals(".bss") || line.equals(".rodata")) {
                 inText = false; continue;
             }
-            if (line.startsWith(".section")) { inText = line.contains("text"); continue; }
+            if (line.startsWith(".section")) {
+                inText = line.contains("text");
+                continue;
+            }
             if (line.startsWith(".")) continue;
-            if (!inText) continue;
 
-            map.add(i + 1);
+            if (inText) {
+                map.add(i);
+            }
         }
         return map;
-    }
-
-    // ── Utility ──────────────────────────────────────────────────────────────
-
-    private static String toHex(long val) {
-        return String.format("0x%016X", val);
     }
 }
