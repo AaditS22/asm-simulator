@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useCallback } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import HomeView from './components/home/HomeView'
 import EditorView from './components/editor/EditorView'
@@ -16,13 +16,19 @@ const PLACEHOLDER =
 
 export default function App() {
     const [code, setCode] = useState(PLACEHOLDER)
+    const [routerKey, setRouterKey] = useState(0)
+
+    const forceNavigate = useCallback((path) => {
+        window.history.replaceState(null, '', path)
+        setRouterKey(k => k + 1)
+    }, [])
 
     return (
-        <BrowserRouter>
+        <BrowserRouter key={routerKey}>
             <Routes>
                 <Route path="/"          element={<HomeView />} />
                 <Route path="/editor"    element={<EditorView code={code} onCodeChange={setCode} />} />
-                <Route path="/simulator" element={<SimulatorView code={code} />} />
+                <Route path="/simulator" element={<SimulatorView code={code} forceNavigate={forceNavigate} />} />
                 <Route path="*"          element={<Navigate to="/" replace />} />
             </Routes>
         </BrowserRouter>
