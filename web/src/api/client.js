@@ -29,4 +29,5 @@ export const api = {
     getState:     ()          => request('GET',  '/state', null),
     scrollStack:  (direction) => request('POST', '/stack/scroll',  { direction }),
     trackMemory:  (address)   => request('POST', '/memory/track',  { address }),
+    ping:         ()          => request('GET',  '/state',  null),
 }

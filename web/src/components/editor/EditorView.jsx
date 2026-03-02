@@ -4,6 +4,7 @@ import ReactCodeMirror from '@uiw/react-codemirror'
 import { EditorView as CMEditorView, ViewPlugin, Decoration } from '@codemirror/view'
 import { RangeSetBuilder } from '@codemirror/state'
 import TopBar from '../shared/TopBar'
+import { api } from '../../api/client';
 
 // ─── ASM Syntax Highlighting ─────────────────────────────────────────────────
 
@@ -203,6 +204,16 @@ export default function EditorView({ code, onCodeChange }) {
     const charCount = code.length
     const canSimulate = code.trim().length > 0
 
+    const handleSimulateClick = async () => {
+        try {
+            await api.ping();
+            navigate('/simulator');
+        } catch (error) {
+            console.error("Server is down or unreachable:", error);
+            navigate('/server-down');
+        }
+    };
+
     function handleFileUpload(e) {
         const file = e.target.files[0]
         if (!file) return
@@ -269,7 +280,7 @@ export default function EditorView({ code, onCodeChange }) {
                             Load code into the simulator
                         </p>
                         <button
-                            onClick={() => navigate('/simulator')}
+                            onClick={handleSimulateClick}
                             disabled={!canSimulate}
                             className="w-full font-sans text-[12.5px] font-bold text-amber bg-bg-raised
                                        border border-amber py-2.5 rounded
