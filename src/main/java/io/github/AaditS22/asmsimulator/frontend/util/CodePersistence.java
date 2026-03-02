@@ -1,6 +1,7 @@
 package io.github.AaditS22.asmsimulator.frontend.util;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -31,7 +32,7 @@ public class CodePersistence {
         try {
             Path dir = resolveStorageDir();
             Files.createDirectories(dir);
-            Files.writeString(dir.resolve(FILE_NAME), code);
+            Files.writeString(dir.resolve(FILE_NAME), code, StandardCharsets.UTF_8);
         } catch (IOException ignored) {
         }
     }
@@ -39,7 +40,7 @@ public class CodePersistence {
     public static String load() {
         try {
             Path file = resolveStorageDir().resolve(FILE_NAME);
-            if (Files.exists(file)) return Files.readString(file);
+            if (Files.exists(file)) return Files.readString(file, StandardCharsets.UTF_8);
         } catch (IOException ignored) {
         }
         return null;
