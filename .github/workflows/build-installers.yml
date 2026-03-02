@@ -28,12 +28,12 @@ jobs:
       - name: Create Windows MSI Installer
         if: runner.os == 'Windows'
         run: |
-          jpackage --type msi --dest target/dist --name AsmSimulator --input target/libs --main-jar asm-visualizer-1.0-SNAPSHOT.jar --main-class io.github.AaditS22.asmsimulator.Launcher --win-dir-chooser --win-shortcut --win-menu --win-shortcut-prompt --win-menu-group "AsmSimulator" --icon src/main/resources/favicon.ico
+          jpackage --type msi --dest target/dist --name AsmSimulator --input target/libs --main-jar asm-visualizer-1.0-SNAPSHOT.jar --main-class io.github.AaditS22.asmsimulator.Launcher --win-dir-chooser --win-shortcut --win-menu --win-shortcut-prompt --win-menu-group "AsmSimulator" --icon src/main/resources/favicon.ico --java-options "-Dfile.encoding=UTF-8"
 
       - name: Create macOS DMG Installer
         if: runner.os == 'macOS'
         run: |
-          jpackage --type dmg --dest target/dist --name AsmSimulator --input target/libs --main-jar asm-visualizer-1.0-SNAPSHOT.jar --main-class io.github.AaditS22.asmsimulator.Launcher --mac-package-name "Asm Simulator" --icon src/main/resources/favicon.icns
+          jpackage --type dmg --dest target/dist --name AsmSimulator --input target/libs --main-jar asm-visualizer-1.0-SNAPSHOT.jar --main-class io.github.AaditS22.asmsimulator.Launcher --mac-package-name "Asm Simulator" --icon src/main/resources/favicon.icns --java-options "-Dfile.encoding=UTF-8"
 
       - name: Install Linux Prerequisites
         if: runner.os == 'Linux'
@@ -42,7 +42,7 @@ jobs:
       - name: Create Linux DEB Installer
         if: runner.os == 'Linux'
         run: |
-          jpackage --type deb --dest target/dist --name asmsimulator --input target/libs --main-jar asm-visualizer-1.0-SNAPSHOT.jar --main-class io.github.AaditS22.asmsimulator.Launcher --linux-shortcut --linux-menu-group "Development" --icon src/main/resources/favicon.png
+          jpackage --type deb --dest target/dist --name asmsimulator --input target/libs --main-jar asm-visualizer-1.0-SNAPSHOT.jar --main-class io.github.AaditS22.asmsimulator.Launcher --linux-shortcut --linux-menu-group "Development" --icon src/main/resources/favicon.png --java-options "-Dfile.encoding=UTF-8"
 
       - name: Upload Installers as Artifacts
         uses: actions/upload-artifact@v4
