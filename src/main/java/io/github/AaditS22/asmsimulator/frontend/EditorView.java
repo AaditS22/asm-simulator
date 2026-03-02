@@ -533,6 +533,7 @@ public class EditorView extends VBox {
         area.replaceText(initial);
         applyHighlightingTo(area, initial);
         applyHighlightingTo(area, PLACEHOLDER);
+        area.setStyleSpans(0, AsmHighlighter.computeHighlighting(area.getText()));
 
         area.textProperty().addListener((obs, oldText, newText) -> {
             updateStatus(newText);
