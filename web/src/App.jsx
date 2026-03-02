@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import HomeView from './components/home/HomeView'
 import EditorView from './components/editor/EditorView'
 import SimulatorView from './components/simulator/SimulatorView'
+import ServerDownView from './components/shared/ServerDownView'
 
 const STORAGE_KEY = 'asm_sim_code'
 
@@ -51,6 +52,7 @@ export default function App() {
                 <Route path="/editor"    element={<EditorView code={code} onCodeChange={handleCodeChange} />} />
                 <Route path="/simulator" element={<SimulatorView code={code} forceNavigate={forceNavigate} />} />
                 <Route path="*"          element={<Navigate to="/" replace />} />
+                <Route path="/server-down" element={<ServerDownView />} />
             </Routes>
         </BrowserRouter>
     )
