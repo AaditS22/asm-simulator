@@ -39,7 +39,7 @@ function AboutModal({ onClose }) {
                 </div>
 
                 <div className="bg-bg-base flex flex-col items-center gap-5 py-9 px-10">
-                    <span className="font-sans text-[20px] font-bold text-amber">Version 1.0</span>
+                    <span className="font-sans text-[20px] font-bold text-amber">Version 1.0.0</span>
 
                     <div className="h-px w-[200px] bg-border-soft" />
 
@@ -68,7 +68,7 @@ function DownloadModal({ onClose }) {
         const fileMap = {
             'windows': 'AsmSimulator-1.0.msi',
             'macOS': 'AsmSimulator-1.0.dmg',
-            'linux': 'asmsimulator-1.0.deb'
+            'linux': 'asmsimulator_1.0-1_amd64.deb'
         };
 
         if (os && fileMap[os]) {
@@ -108,7 +108,7 @@ function DownloadModal({ onClose }) {
                     </p>
 
                     <p className="font-sans text-text-primary text-[13px] leading-relaxed font-bold italic">
-                        However, the web version is more than enough! Just click "Open Editor" to get started.
+                        However, the web version is more than enough! Just click "Open Editor" in the home page to get started.
                     </p>
 
                     <div className="h-px bg-border-soft my-2" />
@@ -218,8 +218,7 @@ export default function HomeView() {
                     >
                         <p className="font-mono text-[10.5px] text-[#FF9B94] leading-relaxed">
                             DISCLAIMER: This is only a teaching tool and does not perfectly mimic real CPU
-                            behaviour. It is made as a learning and experimentation tool, not to be used
-                            for production.
+                            behaviour. It is made for learning and experimentation, and should not be used for production.
                         </p>
                     </div>
                 </div>
