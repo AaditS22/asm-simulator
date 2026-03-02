@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://your-app.up.railway.app/api/:path*"
+      "destination": "https://asm-simulator-production.up.railway.app/api/:path*"
     }
   ]
 }
