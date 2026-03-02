@@ -2,6 +2,11 @@ name: Build Native Installers
 
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release Version'
+        required: true
+        default: 'v1.0.0'
 
 jobs:
   build:
@@ -49,4 +54,27 @@ jobs:
         with:
           name: AsmSimulator-Installers-${{ matrix.os }}
           path: target/dist/*
-          retention-days: 7
+          retention-days: 1
+
+  release:
+    name: Create GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download all installer artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: installers
+          pattern: AsmSimulator-Installers-*
+          merge-multiple: true
+
+      - name: Create Release and Upload Assets
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.version }}
+          name: Release ${{ github.event.inputs.version }}
+          files: installers/*
+          draft: false
+          prerelease: false
