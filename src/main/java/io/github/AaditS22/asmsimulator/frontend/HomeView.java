@@ -85,6 +85,30 @@ public class HomeView extends VBox {
         VBox.setVgrow(outer, Priority.ALWAYS);
     }
 
+    private HBox buildBrand() {
+        Label appLabel = new Label("ASM SIM");
+        appLabel.setStyle(
+                "-fx-font-family: " + SANS + ";" +
+                        "-fx-font-size: 12;" +
+                        "-fx-font-weight: bold;" +
+                        "-fx-text-fill: " + AMBER + ";"
+        );
+
+        Label sep = new Label("  /  ");
+        sep.setStyle("-fx-text-fill: " + TEXT_MUTED + "; -fx-font-size: 12;");
+
+        Label viewLabel = new Label("Home");
+        viewLabel.setStyle(
+                "-fx-font-family: " + SANS + ";" +
+                        "-fx-font-size: 12;" +
+                        "-fx-text-fill: " + TEXT_MUTED + ";"
+        );
+
+        HBox brand = new HBox(0, appLabel, sep, viewLabel);
+        brand.setAlignment(Pos.CENTER_LEFT);
+        return brand;
+    }
+
     private HBox buildTopBar() {
         HBox bar = new HBox(8);
         bar.setAlignment(Pos.CENTER_LEFT);
@@ -96,12 +120,7 @@ public class HomeView extends VBox {
                         "-fx-border-width: 1;"
         );
 
-        Label project = new Label("x86-64 AT&T Assembly Simulator");
-        project.setStyle(
-                "-fx-font-family: " + SANS + ";" +
-                        "-fx-font-size: 12;" +
-                        "-fx-text-fill: " + TEXT_MUTED + ";"
-        );
+        HBox brand = buildBrand();
 
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
@@ -155,7 +174,7 @@ public class HomeView extends VBox {
             }
         });
 
-        bar.getChildren().addAll(project, spacer, aboutBtn, closeBtn);
+        bar.getChildren().addAll(brand, spacer, aboutBtn, closeBtn);
         return bar;
     }
 

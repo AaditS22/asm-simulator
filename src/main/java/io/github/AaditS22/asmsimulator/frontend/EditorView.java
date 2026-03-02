@@ -129,6 +129,30 @@ public class EditorView extends VBox {
         );
     }
 
+    private HBox buildBrand() {
+        Label appLabel = new Label("ASM SIM");
+        appLabel.setStyle(
+                "-fx-font-family: " + SANS + ";" +
+                        "-fx-font-size: 12;" +
+                        "-fx-font-weight: bold;" +
+                        "-fx-text-fill: " + AMBER + ";"
+        );
+
+        Label sep = new Label("  /  ");
+        sep.setStyle("-fx-text-fill: " + TEXT_MUTED + "; -fx-font-size: 12;");
+
+        Label viewLabel = new Label("Editor");
+        viewLabel.setStyle(
+                "-fx-font-family: " + SANS + ";" +
+                        "-fx-font-size: 12;" +
+                        "-fx-text-fill: " + TEXT_MUTED + ";"
+        );
+
+        HBox brand = new HBox(0, appLabel, sep, viewLabel);
+        brand.setAlignment(Pos.CENTER_LEFT);
+        return brand;
+    }
+
     private HBox buildTopBar(Runnable onBack) {
         HBox bar = new HBox(8);
         bar.setAlignment(Pos.CENTER_LEFT);
@@ -141,12 +165,7 @@ public class EditorView extends VBox {
                         "-fx-border-color: transparent transparent " + BORDER_SOFT + " transparent;" +
                         "-fx-border-width: 1;"
         );
-        Label project = new Label("x86-64 AT&T Assembly Simulator");
-        project.setStyle(
-                "-fx-font-family: " + SANS + ";" +
-                        "-fx-font-size: 12;" +
-                        "-fx-text-fill: " + TEXT_MUTED + ";"
-        );
+        HBox brand = buildBrand();
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
         Label backBtn = new Label("← Home");
@@ -193,7 +212,7 @@ public class EditorView extends VBox {
                 ((Stage) getScene().getWindow()).close();
             }
         });
-        bar.getChildren().addAll(project, spacer, backBtn, closeBtn);
+        bar.getChildren().addAll(brand, spacer, backBtn, closeBtn);
         return bar;
     }
 
