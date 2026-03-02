@@ -1,6 +1,7 @@
 package io.github.AaditS22.asmsimulator.frontend;
 
 import io.github.AaditS22.asmsimulator.frontend.util.AsmHighlighter;
+import io.github.AaditS22.asmsimulator.frontend.util.CodePersistence;
 import io.github.AaditS22.asmsimulator.frontend.util.ConfirmDialog;
 import javafx.animation.PauseTransition;
 import javafx.geometry.Insets;
@@ -527,12 +528,16 @@ public class EditorView extends VBox {
             return node;
         });
 
-        area.replaceText(PLACEHOLDER);
+        String saved = CodePersistence.load();
+        String initial = (saved != null && !saved.isBlank()) ? saved : PLACEHOLDER;
+        area.replaceText(initial);
+        applyHighlightingTo(area, initial);
         applyHighlightingTo(area, PLACEHOLDER);
 
         area.textProperty().addListener((obs, oldText, newText) -> {
             updateStatus(newText);
             highlightDebounce.playFromStart();
+            CodePersistence.save(newText);
         });
 
         updateStatus(PLACEHOLDER);
