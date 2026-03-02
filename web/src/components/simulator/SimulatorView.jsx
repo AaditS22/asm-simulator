@@ -96,6 +96,7 @@ export default function SimulatorView({ code, forceNavigate }) {
     const autoPlayRef = useRef(null)
     const speedRef = useRef(250)
     const containerRef = useRef(null)
+    const isSteppingRef = useRef(false)
 
     const [state, setState] = useState(null)
     const [parseSuccess, setParseSuccess] = useState(false)
@@ -266,17 +267,21 @@ export default function SimulatorView({ code, forceNavigate }) {
             setControlsEnabled(false)
 
             autoPlayRef.current = setInterval(async () => {
+                if (isSteppingRef.current) return
+                isSteppingRef.current = true
                 try {
                     const res = await api.step()
                     if (res.error) {
                         if (res.error.includes('halted')) {
                             stopAutoPlay()
+                            isSteppingRef.current = false
                             return
                         }
                         appendTerminalOutput('\nError: ' + res.error, '#FF9B94')
                         setHighlightedLine(-1)
                         stopAutoPlay()
                         setControlsEnabled(false)
+                        isSteppingRef.current = false
                         return
                     }
                     setStepCount(prev => prev + 1)
@@ -290,19 +295,30 @@ export default function SimulatorView({ code, forceNavigate }) {
 
                     if (res.state?.status === 'HALTED') {
                         handleHalt(res.state)
+                        isSteppingRef.current = false
                         return
                     }
                     if (res.state?.status === 'WAITING_FOR_INPUT') {
                         stopAutoPlay()
                         setControlsEnabled(false)
                         activateTerminalInput()
+                        isSteppingRef.current = false
                         return
                     }
                     highlightInstruction(res.state)
                 } catch (err) {
                     stopAutoPlay()
-                    setControlsEnabled(false)
+                    let msg = err.message
+                    try { msg = JSON.parse(err.message)?.error || err.message } catch {}
+                    if (msg.toLowerCase().includes('halted')) {
+                        handleHalt(state)
+                    } else {
+                        appendTerminalOutput('\nError: ' + msg, '#FF9B94')
+                        setHighlightedLine(-1)
+                        setControlsEnabled(false)
+                    }
                 }
+                isSteppingRef.current = false
             }, speedRef.current)
         }
     }
@@ -312,6 +328,7 @@ export default function SimulatorView({ code, forceNavigate }) {
             clearInterval(autoPlayRef.current)
             autoPlayRef.current = null
         }
+        isSteppingRef.current = false
         setIsAutoPlaying(false)
         setControlsEnabled(true)
     }
