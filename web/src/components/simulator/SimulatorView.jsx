@@ -88,7 +88,7 @@ function ErrorModal({ onClose }) {
     )
 }
 
-export default function SimulatorView({ code }) {
+export default function SimulatorView({ code, forceNavigate }) {
     const navigate = useNavigate()
     const codeScrollRef = useRef(null)
     const terminalScrollRef = useRef(null)
@@ -432,8 +432,11 @@ export default function SimulatorView({ code }) {
                 right={
                     <button
                         onClick={() => {
-                            stopAutoPlay()
-                            navigate('/editor', { replace: true })
+                            if (autoPlayRef.current) {
+                                clearInterval(autoPlayRef.current)
+                                autoPlayRef.current = null
+                            }
+                            forceNavigate('/editor')
                         }}
                         className="font-sans text-[11.5px] text-text-primary bg-bg-raised px-3 py-1 rounded hover:bg-bg-hover hover:text-text-bright transition-colors"
                     >
