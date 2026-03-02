@@ -2,7 +2,6 @@ import React from 'react'
 export default function PaneCard({ title, children, style, headerRight }) {
     return (
         <div
-            style={style}
             className="flex flex-col rounded-md border border-border-soft bg-bg-panel overflow-hidden"
             style={{ boxShadow: '0 5px 16px rgba(0,0,0,0.45)', ...style }}
         >
