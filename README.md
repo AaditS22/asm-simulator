@@ -3,12 +3,13 @@
 
 This application was created to help students (and professionals) learn and debug Assembly code. Current tools are often lacking in certain aspects (such as ability to view the entire CPU state at once in a simplified format), and this aims to solve those issues, making a very complicated language easier to understand.
 
+![Local App Demo](docs/SimulatorAnimation.gif)
 ## Features
 - **Simulator**: Ability to simulate custom code (line-by-line, direct run to the end, or autoplayed with a custom delay)
 - **Visualization**: View exactly how different parts of the CPU (such as memory, flags, and registers) are changing with color highlighting, drawing attention to the exact changes
 - **Editor**: Simple personalized editor that applies color formatting to AT&T code, saving entered code across sessions
 - **Local/Web Versions**: Two versions of the application, one for the web and one for desktop. Both have the same features, but this allows a more balanced spread of users and reduced server load on the web version
-- **Language Support**: Supports most instructions and data directives for x86-64 AT&T Assembly. A list of supported instructions (and planned additions) can be found at SUPPORT.md
+- **Language Support**: Supports most instructions and data directives for x86-64 AT&T Assembly. A list of supported instructions (and planned additions) can be found at docs/SUPPORT.md
 
 ## Tech Stack
 - **Backend**: Plain Java (core CPU emulation logic) & Spring-boot (REST API to communicate with frontend)
