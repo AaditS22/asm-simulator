@@ -1,0 +1,41 @@
+# Vercel Web Analytics Integration
+
+Successfully integrated Vercel Web Analytics into the ASM Simulator React application.
+
+## Changes Made
+
+### 1. Installed @vercel/analytics package
+- Added `@vercel/analytics` (version 1.6.1) as a dependency
+- Updated package.json and package-lock.json accordingly
+
+### 2. Modified src/App.jsx
+- Imported the `Analytics` component from `@vercel/analytics/react`
+- Added the `<Analytics />` component inside the BrowserRouter, after the Routes component
+- This placement ensures the Analytics component can track all route changes in the application
+
+## Implementation Details
+
+The implementation follows the Vercel Web Analytics documentation for React applications:
+- The Analytics component is placed at the root level of the application (in App.jsx)
+- It's positioned inside the BrowserRouter to enable automatic route tracking
+- The component will automatically track page views and visitor data when deployed to Vercel
+
+## Testing
+
+- Successfully built the project with `npm run build`
+- Verified no new linting errors were introduced by the changes
+- The Analytics component will begin tracking once the app is deployed to Vercel
+
+## Files Modified
+
+- `package.json` - Added @vercel/analytics dependency
+- `package-lock.json` - Updated with @vercel/analytics and its dependencies  
+- `src/App.jsx` - Added Analytics import and component
+
+## Next Steps
+
+To complete the setup:
+1. Deploy the application to Vercel
+2. Enable Web Analytics in the Vercel dashboard (Project > Analytics > Enable)
+3. After deployment, verify tracking by checking the Network tab for requests to `/_vercel/insights/view`
+4. View analytics data in the Vercel dashboard under the Analytics tab
