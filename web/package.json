@@ -16,6 +16,7 @@
     "@codemirror/state": "^6.5.4",
     "@codemirror/view": "^6.39.15",
     "@uiw/react-codemirror": "^4.25.5",
+    "@vercel/analytics": "^1.6.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-router-dom": "^7.13.1"

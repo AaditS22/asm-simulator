@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { Analytics } from '@vercel/analytics/react'
 import HomeView from './components/home/HomeView'
 import EditorView from './components/editor/EditorView'
 import SimulatorView from './components/simulator/SimulatorView'
@@ -54,6 +55,7 @@ export default function App() {
                 <Route path="*"          element={<Navigate to="/" replace />} />
                 <Route path="/server-down" element={<ServerDownView />} />
             </Routes>
+            <Analytics />
         </BrowserRouter>
     )
 }
