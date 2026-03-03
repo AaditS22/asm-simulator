@@ -9,7 +9,7 @@ This application was created to help students (and professionals) learn and debu
 - **Visualization**: View exactly how different parts of the CPU (such as memory, flags, and registers) are changing with color highlighting, drawing attention to the exact changes
 - **Editor**: Simple personalized editor that applies color formatting to AT&T code, saving entered code across sessions
 - **Local/Web Versions**: Two versions of the application, one for the web and one for desktop. Both have the same features, but this allows a more balanced spread of users and reduced server load on the web version
-- **Language Support**: Supports most instructions and data directives for x86-64 AT&T Assembly. A list of supported instructions (and planned additions) can be found at SUPPORT.md
+- **Language Support**: Supports most instructions and data directives for x86-64 AT&T Assembly. A list of supported instructions (and planned additions) can be found at docs/SUPPORT.md
 
 ## Tech Stack
 - **Backend**: Plain Java (core CPU emulation logic) & Spring-boot (REST API to communicate with frontend)
