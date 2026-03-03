@@ -3,6 +3,7 @@
 
 This application was created to help students (and professionals) learn and debug Assembly code. Current tools are often lacking in certain aspects (such as ability to view the entire CPU state at once in a simplified format), and this aims to solve those issues, making a very complicated language easier to understand.
 
+![Local App Demo](docs/SimulatorAnimation.gif)
 ## Features
 - **Simulator**: Ability to simulate custom code (line-by-line, direct run to the end, or autoplayed with a custom delay)
 - **Visualization**: View exactly how different parts of the CPU (such as memory, flags, and registers) are changing with color highlighting, drawing attention to the exact changes
