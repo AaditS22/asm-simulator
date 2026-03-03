@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react'
 
+// DISCLAIMER: This component was largely written with the help of LLMs
 const AMBER = '#E8A845'
 const TEXT_MUTED = '#606468'
 const TEXT_DIM = '#4A4D50'

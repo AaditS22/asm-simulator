@@ -8,6 +8,7 @@ import RegistersPanel from './RegistersPanel'
 import FlagsPanel from './FlagsPanel'
 import MemoryPanel from './MemoryPanel'
 
+// DISCLAIMER: This component was largely written with the help of LLMs
 const MNEMONICS =
     'mov[a-z]*|add[a-z]*|sub[a-z]*|imul[a-z]*|mul[a-z]*|idiv[a-z]*|div[a-z]*|' +
     'and[a-z]*|or[a-z]*|xor[a-z]*|not[a-z]*|neg[a-z]*|cmp[a-z]*|test[a-z]*|' +

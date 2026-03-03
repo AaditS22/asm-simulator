@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { api } from '../../api/client'
 
+// DISCLAIMER: This component was largely written with the help of LLMs
 const BG_RAISED = '#3C3F41'
 const BG_HOVER = '#4C5052'
 const BORDER_SOFT = '#424547'

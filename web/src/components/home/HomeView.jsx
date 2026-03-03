@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import TopBar from '../shared/TopBar'
 
+// DISCLAIMER: This component was largely written with the help of LLMs
 function getOS() {
     if ("userAgentData" in navigator) {
         const platform = navigator.userAgentData.platform.toLowerCase();

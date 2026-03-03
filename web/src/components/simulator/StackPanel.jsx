@@ -1,6 +1,7 @@
 import React, { useState, useRef, useLayoutEffect } from 'react'
 import { api } from '../../api/client'
 
+// DISCLAIMER: This component was largely written with the help of LLMs
 const ROWS = 10
 
 const ROW_EVEN = 'transparent'

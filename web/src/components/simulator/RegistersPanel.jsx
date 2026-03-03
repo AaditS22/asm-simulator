@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react'
 
+// DISCLAIMER: This component was largely written with the help of LLMs
 const REG_INFO = [
     { reg: 'rax', name32: 'eax', name16: 'ax', name8: 'al' },
     { reg: 'rcx', name32: 'ecx', name16: 'cx', name8: 'cl' },
