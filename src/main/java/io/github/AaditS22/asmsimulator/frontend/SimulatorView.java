@@ -20,6 +20,9 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
+import javafx.scene.text.Font;
+import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
 import javafx.stage.Stage;
 
@@ -118,9 +121,24 @@ public class SimulatorView extends VBox {
                     "-fx-border-radius: 4;" +
                     "-fx-cursor: hand;";
 
+    private static final Font TERMINAL_FONT;
+    static {
+        Font jb = Font.font("JetBrains Mono", 12);
+        if (jb.getFamily().equals("JetBrains Mono")) {
+            TERMINAL_FONT = jb;
+        } else {
+            Font consolas = Font.font("Consolas", 12);
+            if (consolas.getFamily().equals("Consolas")) {
+                TERMINAL_FONT = consolas;
+            } else {
+                TERMINAL_FONT = Font.font("Monospaced", 12);
+            }
+        }
+    }
+
     private List<HBox> codeRows = new ArrayList<>();
     private ScrollPane codeScrollPane;
-    private VBox terminalLines;
+    private TextFlow terminalFlow;
     private ScrollPane terminalScroll;
     private Label stepCounterLabel;
     private TextField terminalInputField;
@@ -848,24 +866,22 @@ public class SimulatorView extends VBox {
 
                     // Flush to UI every 1000 steps or if halting/waiting to prevent freezing infinite loops
                     if (batchSteps >= 1000 || simulator.isHalted() || simulator.isWaitingForInput()) {
-                        String out = batchedOutput.toString();
-                        batchedOutput.setLength(0);
+                        boolean finishing = simulator.isHalted() || simulator.isWaitingForInput();
                         batchSteps = 0;
                         int stepSnapshot = currentStep;
                         String descSnapshot = lastDesc;
                         String mnemonicSnapshot = lastMnemonic;
 
-                        // Take a snapshot of the status to prevent race conditions in the UI thread
-                        boolean haltedSnapshot = simulator.isHalted();
-                        boolean waitingSnapshot = simulator.isWaitingForInput();
+                        if (finishing) {
+                            String out = batchedOutput.toString();
+                            batchedOutput.setLength(0);
+                            boolean haltedSnapshot = simulator.isHalted();
+                            boolean waitingSnapshot = simulator.isWaitingForInput();
 
-                        Platform.runLater(() -> {
-                            if (!out.isEmpty()) appendTerminalOutput(out, TERMINAL_WHITE);
-                            setStepCount(stepSnapshot);
-                            setInstructionDescription(descSnapshot, mnemonicSnapshot);
-
-                            // Only update heavy memory/register UI if the run actually stops
-                            if (haltedSnapshot || waitingSnapshot) {
+                            Platform.runLater(() -> {
+                                if (!out.isEmpty()) appendTerminalOutput(out, TERMINAL_WHITE);
+                                setStepCount(stepSnapshot);
+                                setInstructionDescription(descSnapshot, mnemonicSnapshot);
                                 updateViewPanels();
                                 highlightCurrentInstruction();
 
@@ -875,8 +891,13 @@ public class SimulatorView extends VBox {
                                     isRunningToEnd = false;
                                     activateTerminalInput();
                                 }
-                            }
-                        });
+                            });
+                        } else {
+                            Platform.runLater(() -> {
+                                setStepCount(stepSnapshot);
+                                setInstructionDescription(descSnapshot, mnemonicSnapshot);
+                            });
+                        }
                     }
                 } catch (Exception e) {
                     String msg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
@@ -1098,15 +1119,13 @@ public class SimulatorView extends VBox {
     }
 
     private ScrollPane buildTerminalOutput() {
-        terminalLines = new VBox(0);
-        terminalLines.setStyle("-fx-background-color: " + TERMINAL_BG + ";");
-        terminalLines.setFillWidth(true);
-        terminalLines.heightProperty().addListener((obs, oldVal, newVal) ->
-                terminalScroll.setVvalue(1.0)
-        );
+        terminalFlow = new TextFlow();
+        terminalFlow.setStyle("-fx-background-color: " + TERMINAL_BG + ";");
+        terminalFlow.setPadding(new Insets(2, 14, 2, 14));
+        terminalFlow.setLineSpacing(0);
 
-        terminalScroll = new ScrollPane(terminalLines);
-        terminalScroll.setFitToWidth(true);
+        terminalScroll = new ScrollPane(terminalFlow);
+        terminalScroll.setFitToWidth(false);
         terminalScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
         terminalScroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
         terminalScroll.setStyle(
@@ -1117,6 +1136,13 @@ public class SimulatorView extends VBox {
         terminalScroll.getStylesheets().add(DARK_SCROLL_CSS);
         VBox.setVgrow(terminalScroll, Priority.ALWAYS);
 
+        terminalScroll.viewportBoundsProperty().addListener((obs, oldB, bounds) -> {
+            if (bounds != null) terminalFlow.setMinWidth(bounds.getWidth());
+        });
+        terminalFlow.heightProperty().addListener((obs, oldVal, newVal) ->
+                terminalScroll.setVvalue(1.0)
+        );
+
         // Seed with initial message
         addTerminalRow("No program running.", TEXT_MUTED, false);
 
@@ -1124,37 +1150,12 @@ public class SimulatorView extends VBox {
     }
 
     private void addTerminalRow(String text, String color, boolean withArrow) {
-        if (withArrow) {
-            Label arrow = new Label("❯");
-            arrow.setStyle(
-                    "-fx-font-family: " + MONO + ";" +
-                            "-fx-font-size: 12;" +
-                            "-fx-text-fill: " + color + ";" +
-                            "-fx-padding: 1 6 1 14;"
-            );
-            Label content = new Label(text);
-            content.setStyle(
-                    "-fx-font-family: " + MONO + ";" +
-                            "-fx-font-size: 12;" +
-                            "-fx-text-fill: " + color + ";" +
-                            "-fx-padding: 1 14 1 0;"
-            );
-            content.setWrapText(false);
-            HBox row = new HBox(0, arrow, content);
-            row.setAlignment(Pos.CENTER_LEFT);
-            terminalLines.getChildren().add(row);
-        } else {
-            Label content = new Label(text);
-            content.setStyle(
-                    "-fx-font-family: " + MONO + ";" +
-                            "-fx-font-size: 12;" +
-                            "-fx-text-fill: " + color + ";" +
-                            "-fx-padding: 1 14 1 14;"
-            );
-            content.setWrapText(true);
-            content.setMaxWidth(Double.MAX_VALUE);
-            terminalLines.getChildren().add(content);
-        }
+        String line = withArrow ? "❯ " + text + "\n" : text + "\n";
+        if (!terminalFlow.getChildren().isEmpty()) line = "\n" + line;
+        Text node = new Text(line);
+        node.setFont(Font.font("JetBrains Mono", 12));
+        node.setFill(Color.web(color));
+        terminalFlow.getChildren().add(node);
         scrollTerminalToBottom();
     }
 
@@ -1204,36 +1205,33 @@ public class SimulatorView extends VBox {
     }
 
     public void setTerminalOutput(String text) {
-        if (terminalLines == null) return;
-        terminalLines.getChildren().clear();
+        if (terminalFlow == null) return;
+        terminalFlow.getChildren().clear();
         addTerminalRow(text, TERMINAL_GREEN, false);
     }
 
     public void setTerminalError(String message) {
-        if (terminalLines == null) return;
-        terminalLines.getChildren().clear();
+        if (terminalFlow == null) return;
+        terminalFlow.getChildren().clear();
         addTerminalRow(message, RED_TEXT, false);
     }
 
     private void appendTerminalOutput(String text, String color) {
         if (text == null || text.isEmpty()) return;
-        // Split on newlines so each logical line is its own row
-        String[] parts = text.split("\\R", -1);
-        for (String part : parts) {
-            if (!part.isEmpty()) {
-                addTerminalRow(part, color, false);
-            }
-        }
+        Text node = new Text(text);
+        node.setFont(TERMINAL_FONT);
+        node.setFill(Color.web(color));
+        terminalFlow.getChildren().add(node);
+        scrollTerminalToBottom();
     }
 
     private void appendTerminalError(String text) {
         if (text == null || text.isEmpty()) return;
-        String[] parts = text.split("\\R", -1);
-        for (String part : parts) {
-            if (!part.isEmpty()) {
-                addTerminalRow(part, RED_TEXT, false);
-            }
-        }
+        Text node = new Text(text);
+        node.setFont(TERMINAL_FONT);
+        node.setFill(Color.web(RED_TEXT));
+        terminalFlow.getChildren().add(node);
+        scrollTerminalToBottom();
     }
 
     public void activateTerminalInput() {
