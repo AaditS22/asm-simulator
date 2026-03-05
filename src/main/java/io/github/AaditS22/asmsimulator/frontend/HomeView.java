@@ -214,7 +214,7 @@ public class HomeView extends VBox {
         body.setPadding(new Insets(36, 40, 36, 40));
         body.setStyle("-fx-background-color: " + BG_BASE + ";");
 
-        Label appName = new Label("Version 1.0.0");
+        Label appName = new Label("Version 1.0.1");
         appName.setStyle(
                 "-fx-font-family: " + SANS + ";" +
                         "-fx-font-size: 20;" +

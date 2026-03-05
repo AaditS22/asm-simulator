@@ -40,7 +40,7 @@ function AboutModal({ onClose }) {
                 </div>
 
                 <div className="bg-bg-base flex flex-col items-center gap-5 py-9 px-10">
-                    <span className="font-sans text-[20px] font-bold text-amber">Version 1.0.0</span>
+                    <span className="font-sans text-[20px] font-bold text-amber">Version 1.0.1</span>
 
                     <div className="h-px w-[200px] bg-border-soft" />
 
