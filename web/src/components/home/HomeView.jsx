@@ -105,7 +105,8 @@ function DownloadModal({ onClose }) {
                     </h2>
 
                     <p className="font-sans text-text-primary text-[13px] leading-relaxed">
-                        The desktop app will give a slightly larger simulator view, so you can see more parts of the CPU at once while running your code. It also relies completely on your computer's resources and can be run offline.
+                        The desktop app will give a slightly larger simulator view, so you can see more parts of the CPU at once while running your code. It also relies completely on your computer's resources and can be run offline, with features
+                         like autoplay often running faster than the web version.
                     </p>
 
                     <p className="font-sans text-text-primary text-[13px] leading-relaxed font-bold italic">

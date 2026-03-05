@@ -102,7 +102,7 @@ export default function SimulatorView({ code, forceNavigate }) {
     const [state, setState] = useState(null)
     const [parseSuccess, setParseSuccess] = useState(false)
     const [showParseError, setShowParseError] = useState(false)
-    const [terminalLines, setTerminalLines] = useState([{ text: 'No program running.', color: '#777777', arrow: false }])
+    const [terminalLines, setTerminalLines] = useState([{ text: 'No program running.', color: '#777777', arrow: false, endsWithNewline: true }])
     const [stepCount, setStepCount] = useState(0)
     const [instrDesc, setInstrDesc] = useState(null)
     const [instrMnemonic, setInstrMnemonic] = useState(null)
@@ -128,7 +128,7 @@ export default function SimulatorView({ code, forceNavigate }) {
             if (res.success) {
                 setParseSuccess(true)
                 setState(res.state)
-                setTerminalLines([{ text: 'Parsed successfully. Ready to simulate.', color: '#4EC94E', arrow: false }])
+                setTerminalLines([{ text: 'Parsed successfully. Ready to simulate.', color: '#4EC94E', arrow: false, endsWithNewline: true }])
                 highlightInstruction(res.state)
             }
         }).catch(err => {
@@ -173,14 +173,37 @@ export default function SimulatorView({ code, forceNavigate }) {
     }
 
     function addTerminalLine(text, color, arrow = false) {
-        setTerminalLines(prev => [...prev, { text, color, arrow }])
+        setTerminalLines(prev => [...prev, { text, color, arrow, endsWithNewline: true }])
         scrollTerminalToBottom()
     }
 
     function appendTerminalOutput(text, color) {
         if (!text) return
-        const parts = String(text).split(/\r?\n/).filter(p => p.length > 0)
-        setTerminalLines(prev => [...prev, ...parts.map(p => ({ text: p, color, arrow: false }))])
+        const parts = String(text).split(/\r?\n/)
+        const endsWithNewline = parts[parts.length - 1] === ''
+        const chunks = endsWithNewline ? parts.slice(0, -1) : parts
+
+        if (chunks.length === 0) return
+
+        setTerminalLines(prev => {
+            const lines = [...prev]
+            chunks.forEach((chunk, i) => {
+                const isFirst = i === 0
+                const last = lines[lines.length - 1]
+                if (isFirst && last && !last.arrow && last.endsWithNewline === false) {
+                    lines[lines.length - 1] = { ...last, text: last.text + chunk }
+                } else {
+                    lines.push({ text: chunk, color, arrow: false, endsWithNewline: false })
+                }
+                if (i < chunks.length - 1) {
+                    lines[lines.length - 1] = { ...lines[lines.length - 1], endsWithNewline: true }
+                }
+            })
+            if (endsWithNewline) {
+                lines[lines.length - 1] = { ...lines[lines.length - 1], endsWithNewline: true }
+            }
+            return lines
+        })
         scrollTerminalToBottom()
     }
 
@@ -248,7 +271,7 @@ export default function SimulatorView({ code, forceNavigate }) {
             setStepCount(0)
             setInstrDesc(null)
             setInstrMnemonic(null)
-            setTerminalLines([{ text: 'Reset. Ready to simulate.', color: '#4EC94E', arrow: false }])
+            setTerminalLines([{ text: 'Reset. Ready to simulate.', color: '#4EC94E', arrow: false, endsWithNewline: true }])
             setControlsEnabled(true)
             setTerminalInputActive(false)
             setTerminalInputValue('')
