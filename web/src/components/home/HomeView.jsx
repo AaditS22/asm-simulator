@@ -62,24 +62,36 @@ function AboutModal({ onClose }) {
 
 function DownloadModal({ onClose }) {
     const os = getOS();
+    const [downloadUrl, setDownloadUrl] = useState(null);
+    const [loading, setLoading] = useState(true);
+
+    React.useEffect(() => {
+        fetch('https://api.github.com/repos/AaditS22/asm-simulator/releases/latest')
+            .then(r => r.json())
+            .then(data => {
+                const version = data.tag_name.replace(/^v/, '');
+                const fileMap = {
+                    'windows': `AsmSimulator-${version}.msi`,
+                    'mac':     `AsmSimulator-${version}.dmg`,
+                    'linux':   `asmsimulator_${version}-1_amd64.deb`
+                };
+                if (os && fileMap[os]) {
+                    setDownloadUrl(
+                        `https://github.com/AaditS22/asm-simulator/releases/latest/download/${fileMap[os]}`
+                    );
+                }
+            })
+            .finally(() => setLoading(false));
+    }, []);
 
     const handleDownload = () => {
-        const baseUrl = 'https://github.com/AaditS22/asm-simulator/releases/latest/download/';
-
-        const fileMap = {
-            'windows': 'AsmSimulator-1.0.msi',
-            'macOS': 'AsmSimulator-1.0.dmg',
-            'linux': 'asmsimulator_1.0-1_amd64.deb'
-        };
-
-        if (os && fileMap[os]) {
-            const link = document.createElement('a');
-            link.href = baseUrl + fileMap[os];
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            onClose();
-        }
+        if (!downloadUrl) return;
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        onClose();
     };
 
     return (
@@ -134,7 +146,7 @@ function DownloadModal({ onClose }) {
                         </button>
                         <button
                             onClick={handleDownload}
-                            disabled={!os}
+                            disabled={!downloadUrl || loading}
                             className="px-5 py-2 rounded font-bold text-[#1E1E1E] bg-amber border border-amber hover:bg-yellow-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-[12.5px]"
                         >
                             Yes, Download
