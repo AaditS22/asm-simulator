@@ -32,9 +32,11 @@ The application currently only supports x86-64 AT&T assembly, although Intel syn
 - SHL/SHR
 - TEST
 - NOP
-
-SYSCALL support is the next planned addition to instructions
-
+#### SYSCALL
+- Read (syscall 0)
+- Write (syscall 1)
+- Exit (syscall 60)
+- Group exit (syscall 231)
 ## Data
 #### Sections
 - TEXT
@@ -49,4 +51,4 @@ SYSCALL support is the next planned addition to instructions
 - .space/.skip/.zero
 - .align
 
-Support for .include (and multiple files) is the next planned addition to directives
+Support for the .include directive (and multiple files, along with syscalls to read/write from files) is the next planned addition.
