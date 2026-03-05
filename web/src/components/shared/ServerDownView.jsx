@@ -38,7 +38,7 @@ export default function ServerDownView() {
 
                     <p className="font-sans text-[11.5px] text-text-muted text-center leading-relaxed w-full mb-8">
                         Unable to connect to the backend. The server might be down, or there is a network issue. You can still
-                        continue to use the editor, and code will be saved locally, but you will be unable to simulate your code.
+                        download the local application (from the homepage) and run it offline, however.
                     </p>
 
                     <button

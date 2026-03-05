@@ -37,7 +37,7 @@ public class InstructionCreator {
     private static final Set<String> UNSIZED_MNEMONICS = Set.of(
             "ret", "jmp", "call", "loop",
             "je", "jne", "jg", "jge", "jl", "jle",
-            "nop"
+            "nop", "syscall"
     );
 
     private static final Set<String> BRANCH_MNEMONICS = Set.of(
@@ -164,6 +164,7 @@ public class InstructionCreator {
             case "call" -> new CallInstruction(mnemonic, Size.QUAD, operands);
             case "loop" -> new LoopInstruction(mnemonic, Size.QUAD, operands);
             case "nop" -> new NopInstruction(mnemonic, Size.QUAD, operands);
+            case "syscall" -> new SyscallInstruction(mnemonic, Size.QUAD, operands);
             default -> new ConditionalJumpInstruction(
                     mnemonic, Size.QUAD, operands);
         };

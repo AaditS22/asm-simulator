@@ -358,4 +358,220 @@ class BranchingInstructionTest {
         String desc = instruction.getDescription(state, labelManager);
         assertTrue(desc.contains("the label 'test'"));
     }
+
+    // ==================== Syscall Tests ====================
+
+    @Test
+    void syscallIllegalOperandCountTest() {
+        assertThrows(IllegalArgumentException.class, () ->
+                new SyscallInstruction("syscall", Size.QUAD, List.of(new RegisterOperand("%rax")))
+        );
+    }
+
+    @Test
+    void syscallUnsupportedCodeTest() {
+        state.setRegister("rax", 8, 99L);
+        SyscallInstruction instruction = new SyscallInstruction("syscall", Size.QUAD, List.of());
+        assertThrows(UnsupportedOperationException.class, () ->
+                instruction.execute(state, labelManager)
+        );
+    }
+
+    @Test
+    void syscallWriteOutputTest() {
+        String msg = "hello";
+        long addr = 0x5000L;
+        for (int i = 0; i < msg.length(); i++) {
+            state.getMemory().writeByte(addr + i, (byte) msg.charAt(i));
+        }
+        state.setRegister("rax", 8, 1L);
+        state.setRegister("rdi", 8, 1L);
+        state.setRegister("rsi", 8, addr);
+        state.setRegister("rdx", 8, msg.length());
+
+        SyscallInstruction instruction = new SyscallInstruction("syscall", Size.QUAD, List.of());
+        instruction.execute(state, labelManager);
+
+        assertEquals("hello", state.getIOBuffer().flush());
+    }
+
+    @Test
+    void syscallWriteSetsRaxToByteCountTest() {
+        long addr = 0x5000L;
+        state.getMemory().writeByte(addr, (byte) 'A');
+        state.setRegister("rax", 8, 1L);
+        state.setRegister("rdi", 8, 1L);
+        state.setRegister("rsi", 8, addr);
+        state.setRegister("rdx", 8, 1L);
+
+        SyscallInstruction instruction = new SyscallInstruction("syscall", Size.QUAD, List.of());
+        instruction.execute(state, labelManager);
+
+        assertEquals(1L, state.getRegister("rax", 8));
+    }
+
+    @Test
+    void syscallWriteUnsupportedDestTest() {
+        state.setRegister("rax", 8, 1L);
+        state.setRegister("rdi", 8, 2L); // stderr - not supported
+        state.setRegister("rsi", 8, 0x5000L);
+        state.setRegister("rdx", 8, 4L);
+
+        SyscallInstruction instruction = new SyscallInstruction("syscall", Size.QUAD, List.of());
+        assertThrows(UnsupportedOperationException.class, () ->
+                instruction.execute(state, labelManager)
+        );
+    }
+
+    @Test
+    void syscallReadWritesToMemoryTest() {
+        long dest = 0x6000L;
+        state.setRegister("rax", 8, 0L);
+        state.setRegister("rdi", 8, 0L);
+        state.setRegister("rsi", 8, dest);
+        state.setRegister("rdx", 8, 5L);
+        state.getIOBuffer().setInput("hello");
+
+        SyscallInstruction instruction = new SyscallInstruction("syscall", Size.QUAD, List.of());
+        instruction.execute(state, labelManager);
+
+        assertEquals('h', (char) (state.getMemory().readByte(dest) & 0xFF));
+        assertEquals('e', (char) (state.getMemory().readByte(dest + 1) & 0xFF));
+        assertEquals('l', (char) (state.getMemory().readByte(dest + 2) & 0xFF));
+    }
+
+    @Test
+    void syscallReadSetsRaxToBytesReadTest() {
+        long dest = 0x6000L;
+        state.setRegister("rax", 8, 0L);
+        state.setRegister("rdi", 8, 0L);
+        state.setRegister("rsi", 8, dest);
+        state.setRegister("rdx", 8, 10L);
+        state.getIOBuffer().setInput("hi");
+
+        SyscallInstruction instruction = new SyscallInstruction("syscall", Size.QUAD, List.of());
+        instruction.execute(state, labelManager);
+
+        // "hi" + appended "\n" = 3 bytes, capped by rdx=10
+        assertEquals(3L, state.getRegister("rax", 8));
+    }
+
+    @Test
+    void syscallReadRespectsCountLimitTest() {
+        long dest = 0x6000L;
+        state.setRegister("rax", 8, 0L);
+        state.setRegister("rdi", 8, 0L);
+        state.setRegister("rsi", 8, dest);
+        state.setRegister("rdx", 8, 2L); // only read 2 bytes
+        state.getIOBuffer().setInput("hello");
+
+        SyscallInstruction instruction = new SyscallInstruction("syscall", Size.QUAD, List.of());
+        instruction.execute(state, labelManager);
+
+        assertEquals(2L, state.getRegister("rax", 8));
+        assertEquals('h', (char) (state.getMemory().readByte(dest) & 0xFF));
+        assertEquals('e', (char) (state.getMemory().readByte(dest + 1) & 0xFF));
+        // byte at dest+2 should not have been written ('l')
+        assertNotEquals('l', (char) (state.getMemory().readByte(dest + 2) & 0xFF));
+    }
+
+    @Test
+    void syscallReadWaitsWhenNoInputTest() {
+        state.setRegister("rax", 8, 0L);
+        state.setRegister("rdi", 8, 0L);
+        state.setRegister("rsi", 8, 0x6000L);
+        state.setRegister("rdx", 8, 8L);
+        // No input provided
+
+        SyscallInstruction instruction = new SyscallInstruction("syscall", Size.QUAD, List.of());
+        instruction.execute(state, labelManager);
+
+        assertTrue(state.getIOBuffer().isWaitingForInput());
+    }
+
+    @Test
+    void syscallReadUnsupportedSrcTest() {
+        state.setRegister("rax", 8, 0L);
+        state.setRegister("rdi", 8, 3L); // not stdin
+        state.setRegister("rsi", 8, 0x6000L);
+        state.setRegister("rdx", 8, 4L);
+        state.getIOBuffer().setInput("data");
+
+        SyscallInstruction instruction = new SyscallInstruction("syscall", Size.QUAD, List.of());
+        assertThrows(UnsupportedOperationException.class, () ->
+                instruction.execute(state, labelManager)
+        );
+    }
+
+    @Test
+    void syscallExit60Test() {
+        state.setRegister("rax", 8, 60L);
+        state.setRegister("rdi", 8, 42L);
+
+        SyscallInstruction instruction = new SyscallInstruction("syscall", Size.QUAD, List.of());
+        instruction.execute(state, labelManager);
+
+        assertTrue(state.getIOBuffer().isExitRequested());
+        assertEquals(42L, state.getIOBuffer().getExitCode());
+    }
+
+    @Test
+    void syscallExit231Test() {
+        state.setRegister("rax", 8, 231L);
+        state.setRegister("rdi", 8, 1L);
+
+        SyscallInstruction instruction = new SyscallInstruction("syscall", Size.QUAD, List.of());
+        instruction.execute(state, labelManager);
+
+        assertTrue(state.getIOBuffer().isExitRequested());
+        assertEquals(1L, state.getIOBuffer().getExitCode());
+    }
+
+    @Test
+    void syscallDescriptionWriteTest() {
+        state.setRegister("rax", 8, 1L);
+        SyscallInstruction instruction = new SyscallInstruction("syscall", Size.QUAD, List.of());
+        String desc = instruction.getDescription(state, labelManager);
+        assertTrue(desc.contains("syscall 1"));
+    }
+
+    @Test
+    void syscallDescriptionReadWaitingTest() {
+        state.setRegister("rax", 8, 0L);
+        state.getIOBuffer().setWaitingForInput(true);
+        SyscallInstruction instruction = new SyscallInstruction("syscall", Size.QUAD, List.of());
+        String desc = instruction.getDescription(state, labelManager);
+        assertTrue(desc.contains("Waiting for user input"));
+    }
+
+    @Test
+    void syscallDescriptionReadCompletedTest() {
+        state.setRegister("rax", 8, 0L);
+        // waitingForInput is false by default
+        SyscallInstruction instruction = new SyscallInstruction("syscall", Size.QUAD, List.of());
+        String desc = instruction.getDescription(state, labelManager);
+        assertTrue(desc.contains("syscall 0"));
+        assertFalse(desc.contains("Waiting"));
+    }
+
+    @Test
+    void syscallDescriptionExit60Test() {
+        state.setRegister("rax", 8, 60L);
+        SyscallInstruction instruction = new SyscallInstruction("syscall", Size.QUAD, List.of());
+        assertTrue(instruction.getDescription(state, labelManager).contains("syscall 60"));
+    }
+
+    @Test
+    void syscallDescriptionExit231Test() {
+        state.setRegister("rax", 8, 231L);
+        SyscallInstruction instruction = new SyscallInstruction("syscall", Size.QUAD, List.of());
+        assertTrue(instruction.getDescription(state, labelManager).contains("syscall 231"));
+    }
+
+    @Test
+    void syscallDescriptionUnknownTest() {
+        state.setRegister("rax", 8, 99L);
+        SyscallInstruction instruction = new SyscallInstruction("syscall", Size.QUAD, List.of());
+        assertTrue(instruction.getDescription(state, labelManager).contains("not (yet) supported"));
+    }
 }
