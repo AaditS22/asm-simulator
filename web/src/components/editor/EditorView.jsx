@@ -198,6 +198,7 @@ export default function EditorView({ code, onCodeChange }) {
     const navigate = useNavigate()
     const fileInputRef = useRef(null)
     const extensions = useMemo(() => [asmSyntaxPlugin, asmTheme], [])
+    const [guideOpen, setGuideOpen] = useState(false)
 
     const lineCount = code === '' ? 0 : code.split('\n').length
     const charCount = code.length
@@ -243,21 +244,36 @@ export default function EditorView({ code, onCodeChange }) {
                 }
             />
 
-            <div className="flex flex-1 gap-6 px-8 py-7 bg-bg-base min-h-0">
+            <div className="flex flex-col md:flex-row flex-1 gap-3 md:gap-6 px-4 md:px-8 py-4 md:py-7 bg-bg-base min-h-0">
 
                 {/* ── Left panel ── */}
                 <div
-                    className="flex flex-col bg-bg-panel border border-border-soft rounded-md overflow-hidden"
-                    style={{ width: 230, minWidth: 210, maxWidth: 250, boxShadow: '0 6px 20px rgba(0,0,0,0.4)' }}
+                    className="flex flex-col bg-bg-panel border border-border-soft rounded-md overflow-hidden md:w-[230px] md:min-w-[210px] md:max-w-[250px]"
+                    style={{ boxShadow: '0 6px 20px rgba(0,0,0,0.4)' }}
                 >
-                    <div className="px-4 pt-4 pb-3">
+                    {/* Header — always visible; tap to toggle on mobile */}
+                    <button
+                        className="flex items-center justify-between px-4 pt-4 pb-3 w-full text-left md:cursor-default"
+                        onClick={() => setGuideOpen(o => !o)}
+                    >
                         <span className="font-mono text-[10px] font-bold text-text-muted tracking-widest">
                             QUICK GUIDE
                         </span>
-                    </div>
+                        {/* Chevron only on mobile */}
+                        <span className="md:hidden font-mono text-[11px] text-text-muted">
+                            {guideOpen ? '▲' : '▼'}
+                        </span>
+                    </button>
                     <div className="h-px bg-border-soft" />
 
-                    <div className="flex-1 overflow-y-auto py-2 min-h-0">
+                    {/* Scrollable guide list — always shown on desktop, toggled on mobile */}
+                    <div
+                        className={[
+                            'overflow-y-auto py-2 min-h-0',
+                            'md:flex md:flex-col md:flex-1 md:max-h-none md:overflow-y-auto',
+                            guideOpen ? 'block max-h-[40vh]' : 'hidden md:flex',
+                        ].join(' ')}
+                    >
                         {GUIDE_ITEMS.map((item, i) => {
                             if (item.type === 'section') return <RefSection key={i} label={item.label} />
                             if (item.type === 'spacer')  return <div key={i} style={{ height: 4 }} />
@@ -274,15 +290,15 @@ export default function EditorView({ code, onCodeChange }) {
 
                     <div className="h-px bg-border-soft" />
 
-                    <div className="flex flex-col items-center gap-2 px-4 pt-4 pb-[18px]">
-                        <p className="font-sans text-[11px] text-text-muted text-center leading-relaxed w-full">
+                    <div className="flex flex-row md:flex-col items-center gap-2 px-4 py-3 md:pt-4 md:pb-[18px]">
+                        <p className="hidden md:block font-sans text-[11px] text-text-muted text-center leading-relaxed w-full">
                             Load code into the simulator
                         </p>
                         <button
                             onClick={handleSimulateClick}
                             disabled={!canSimulate}
                             className="w-full font-sans text-[12.5px] font-bold text-amber bg-bg-raised
-                                       border border-amber py-2.5 rounded
+                                       border border-amber py-2 md:py-2.5 rounded
                                        hover:bg-amber hover:text-[#1E1E1E]
                                        disabled:opacity-40 disabled:cursor-not-allowed
                                        transition-colors"
