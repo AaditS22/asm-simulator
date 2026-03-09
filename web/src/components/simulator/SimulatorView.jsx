@@ -89,6 +89,30 @@ function ErrorModal({ onClose }) {
     )
 }
 
+function SmallScreenBanner({ onDismiss }) {
+    return (
+        <div className="flex items-center gap-3 px-4 py-2.5 shrink-0"
+             style={{ backgroundColor: '#2E2508', borderBottom: '1px solid #5A4010' }}>
+            <span style={{ fontSize: 16 }}>⚠</span>
+            <p className="font-sans text-[11.5px] text-amber leading-snug flex-1">
+                This simulator is designed for larger screens. On small or mobile displays,
+                some panels may be difficult to use. For the best experience, use a desktop browser.
+            </p>
+            <button
+                onClick={onDismiss}
+                className="font-sans text-[11px] font-bold px-3 py-1 rounded shrink-0"
+                style={{
+                    color: '#E8A845',
+                    backgroundColor: '#3C3F41',
+                    border: '1px solid #5A4010',
+                }}
+            >
+                Got it
+            </button>
+        </div>
+    )
+}
+
 export default function SimulatorView({ code, forceNavigate }) {
     const navigate = useNavigate()
     const codeScrollRef = useRef(null)
@@ -114,6 +138,9 @@ export default function SimulatorView({ code, forceNavigate }) {
     const [terminalHeight, setTerminalHeight] = useState(175)
     const [speed, setSpeed] = useState(250)
     const [resizerHover, setResizerHover] = useState(false)
+    const [narrow, setNarrow] = useState(false)
+    const [showSmallScreenBanner, setShowSmallScreenBanner] = useState(false)
+    const [bannerDismissed, setBannerDismissed] = useState(false)
 
     const codeLines = (code || '').split(/\r?\n/)
 
@@ -121,6 +148,17 @@ export default function SimulatorView({ code, forceNavigate }) {
         window.__setSimState = setState
         return () => { delete window.__setSimState }
     }, [])
+
+    useEffect(() => {
+        if (!containerRef.current) return
+        const ro = new ResizeObserver(([entry]) => {
+            const w = entry.contentRect.width
+            setNarrow(w < 900)
+            if (w < 900 && !bannerDismissed) setShowSmallScreenBanner(true)
+        })
+        ro.observe(containerRef.current)
+        return () => ro.disconnect()
+    }, [bannerDismissed])
 
     useEffect(() => {
         if (!code || code.trim() === '') return
@@ -487,7 +525,7 @@ export default function SimulatorView({ code, forceNavigate }) {
             />
 
             {/* Control Bar */}
-            <div className="flex items-center gap-3 px-4 py-2 border-b border-border-soft" style={{ backgroundColor: '#1E1F22' }}>
+            <div className="flex items-center gap-3 px-4 py-2 border-b border-border-soft shrink-0" style={{ backgroundColor: '#1E1F22' }}>
                 <button
                     onClick={handleReset}
                     className="font-sans text-[12px] font-bold px-3 py-1.5 rounded transition-colors"
@@ -546,41 +584,63 @@ export default function SimulatorView({ code, forceNavigate }) {
 
                 <div className="flex-1" />
                 <span className="font-mono text-[11.5px] text-text-muted px-1">
-                    step&nbsp;&nbsp;{state?.stepCount ?? stepCount}
-                </span>
+                step&nbsp;&nbsp;{state?.stepCount ?? 0}
+            </span>
             </div>
 
-            {/* Main Content */}
-            <div className="flex flex-1 min-h-0" style={{ backgroundColor: '#2B2B2B' }}>
-                {/* Code Pane (Left) */}
-                <div className="flex flex-col h-full" style={{ minWidth: 330, width: 420, maxWidth: 560, backgroundColor: '#1E1F22' }}>
-                    {/* Code Header */}
+            {/* Small Screen Banner */}
+            {showSmallScreenBanner && (
+                <SmallScreenBanner onDismiss={() => {
+                    setShowSmallScreenBanner(false)
+                    setBannerDismissed(true)
+                }} />
+            )}
+
+            {/* Scrollable Wrapper */}
+            <div className={`flex flex-col flex-1 min-h-0 ${narrow ? 'overflow-y-auto' : ''}`}>
+
+                {/* Main Content */}
+                <div
+                    className={`flex ${narrow ? 'flex-col' : 'flex-1 min-h-0'}`}
+                    style={{ backgroundColor: '#2B2B2B' }}
+                >
+                    {/* Code Pane (Left) */}
                     <div
-                        className="flex items-center px-3.5 border-b border-border-soft"
-                        style={{ height: 36, minHeight: 36, backgroundColor: '#313335' }}
+                        className="flex flex-col"
+                        style={{
+                            backgroundColor: '#1E1F22',
+                            ...(narrow
+                                ? { width: '100%', height: 350 }
+                                : { minWidth: 330, width: 420, maxWidth: 560, height: '100%' }),
+                        }}
                     >
-                        <span className="font-sans text-[11.5px] font-bold text-text-primary">Source Code</span>
-                        <div className="flex-1" />
-                        <span
-                            className="font-sans text-[9.5px] font-bold text-text-muted px-[7px] py-[2px] rounded"
-                            style={{ backgroundColor: '#3C3F41', letterSpacing: '0.5px' }}
+                        {/* Code Header */}
+                        <div
+                            className="flex items-center px-3.5 border-b border-border-soft shrink-0"
+                            style={{ height: 36, minHeight: 36, backgroundColor: '#313335' }}
                         >
+                            <span className="font-sans text-[11.5px] font-bold text-text-primary">Source Code</span>
+                            <div className="flex-1" />
+                            <span
+                                className="font-sans text-[9.5px] font-bold text-text-muted px-[7px] py-[2px] rounded"
+                                style={{ backgroundColor: '#3C3F41', letterSpacing: '0.5px' }}
+                            >
                             READ ONLY / Go back to the editor to edit code
                         </span>
-                    </div>
+                        </div>
 
-                    {/* Code Lines */}
-                    <div ref={codeScrollRef} className="flex-1 overflow-auto" style={{ backgroundColor: '#1E1F22' }}>
-                        <div style={{ backgroundColor: '#1E1F22' }}>
-                            {codeLines.map((line, i) => (
-                                <div
-                                    key={i}
-                                    className="flex items-center"
-                                    style={{
-                                        minHeight: 22, height: 22,
-                                        backgroundColor: highlightedLine === i ? '#214283' : '#1E1F22',
-                                    }}
-                                >
+                        {/* Code Lines */}
+                        <div ref={codeScrollRef} className="flex-1 min-h-0 overflow-auto" style={{ backgroundColor: '#1E1F22' }}>
+                            <div style={{ backgroundColor: '#1E1F22' }}>
+                                {codeLines.map((line, i) => (
+                                    <div
+                                        key={i}
+                                        className="flex items-center"
+                                        style={{
+                                            minHeight: 22, height: 22,
+                                            backgroundColor: highlightedLine === i ? '#214283' : '#1E1F22',
+                                        }}
+                                    >
                                     <span
                                         className="font-mono text-[13px] text-right shrink-0"
                                         style={{
@@ -592,23 +652,23 @@ export default function SimulatorView({ code, forceNavigate }) {
                                     >
                                         {i + 1}
                                     </span>
-                                    <span className="font-mono text-[13px]" style={{ padding: '1px 14px 1px 10px', whiteSpace: 'pre' }}>
+                                        <span className="font-mono text-[13px]" style={{ padding: '1px 14px 1px 10px', whiteSpace: 'pre' }}>
                                         {highlightLine(line).map((tok, j) => (
                                             <span key={j} style={tok.style}>{tok.text}</span>
                                         ))}
                                     </span>
-                                </div>
-                            ))}
+                                    </div>
+                                ))}
+                            </div>
                         </div>
-                    </div>
 
-                    {/* Instruction Description Pane */}
-                    <div style={{
-                        minHeight: 110, maxHeight: 140,
-                        backgroundColor: '#1C1E21',
-                        borderTop: '2px solid #E8A845',
-                    }}>
-                        <div className="flex items-center gap-2 px-3.5 pt-2 pb-1.5">
+                        {/* Instruction Description Pane */}
+                        <div className="shrink-0" style={{
+                            minHeight: 110, maxHeight: 140,
+                            backgroundColor: '#1C1E21',
+                            borderTop: '2px solid #E8A845',
+                        }}>
+                            <div className="flex items-center gap-2 px-3.5 pt-2 pb-1.5">
                             <span
                                 className="font-sans text-[9px] font-bold px-2 py-[2px] rounded"
                                 style={{
@@ -620,155 +680,175 @@ export default function SimulatorView({ code, forceNavigate }) {
                             >
                                 {hasDescription ? instrMnemonic : 'AWAITING EXECUTION'}
                             </span>
-                            <div className="flex-1" />
-                            <span className="text-[11px]" style={{ color: '#3A3010' }}>⚙</span>
-                        </div>
-                        <p
-                            className="font-sans text-[12px] px-4 pb-2.5 leading-relaxed"
-                            style={{ color: hasDescription ? '#E8E8E8' : '#555759' }}
-                        >
-                            {hasDescription
-                                ? instrDesc
-                                : 'A simple explanation of each executed instruction will be visible here'}
-                        </p>
-                    </div>
-                </div>
-
-                {/* Vertical Divider */}
-                <div style={{ width: 1, backgroundColor: '#424547' }} />
-
-                {/* Visualization Area (Right) */}
-                <div className="flex flex-col flex-1 min-h-0 min-w-0 p-3.5 gap-3" style={{ backgroundColor: '#2B2B2B' }}>
-                    <div className="flex gap-3 flex-1 min-h-0">
-                        {/* Stack */}
-                        <div className="flex flex-col h-full" style={{ minWidth: 260, width: 280, maxWidth: 320 }}>
-                            <PaneCard title="Stack" style={{ height: '100%' }}>
-                                <StackPanel state={state} />
-                            </PaneCard>
-                        </div>
-
-                        {/* Right Column: Memory+Flags top, Registers bottom */}
-                        <div className="flex flex-col flex-1 min-w-0 gap-3">
-                            {/* Adjusted height to make Registers far more visible */}
-                            <div className="flex gap-3" style={{ minHeight: 200, height: 230, maxHeight: 230 }}>
-                                <div className="flex-1 min-w-0">
-                                    <PaneCard title="Memory" style={{ height: '100%' }}>
-                                        <MemoryPanel state={state} />
-                                    </PaneCard>
-                                </div>
-                                <div style={{ minWidth: 158, width: 162, maxWidth: 162 }}>
-                                    <PaneCard title="Flags" style={{ height: '100%' }}>
-                                        <FlagsPanel state={state} />
-                                    </PaneCard>
-                                </div>
+                                <div className="flex-1" />
+                                <span className="text-[11px]" style={{ color: '#3A3010' }}>⚙</span>
                             </div>
-                            <div className="flex-1 min-h-0">
-                                <PaneCard title="Registers" style={{ height: '100%' }}>
-                                    <RegistersPanel state={state} />
+                            <p
+                                className="font-sans text-[12px] px-4 pb-2.5 leading-relaxed"
+                                style={{ color: hasDescription ? '#E8E8E8' : '#555759' }}
+                            >
+                                {hasDescription
+                                    ? instrDesc
+                                    : 'A simple explanation of each executed instruction will be visible here'}
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Vertical Divider — hidden in narrow */}
+                    {!narrow && <div style={{ width: 1, backgroundColor: '#424547' }} />}
+
+                    {/* Visualization Area (Right) */}
+                    <div
+                        className={`flex flex-col p-3.5 gap-3 ${narrow ? '' : 'flex-1 min-h-0 min-w-0'}`}
+                        style={{ backgroundColor: '#2B2B2B', ...(narrow ? { width: '100%' } : {}) }}
+                    >
+                        <div className={`flex gap-3 ${narrow ? 'flex-col' : 'flex-1 min-h-0'}`}>
+                            {/* Stack */}
+                            <div
+                                className="flex flex-col"
+                                style={narrow
+                                    ? { width: '100%', height: 300 }
+                                    : { minWidth: 260, width: 280, maxWidth: 320, height: '100%' }}
+                            >
+                                <PaneCard title="Stack" style={{ height: '100%' }}>
+                                    <StackPanel state={state} />
                                 </PaneCard>
                             </div>
+
+                            {/* Right Column: Memory+Flags top, Registers bottom */}
+                            <div className={`flex flex-col gap-3 ${narrow ? '' : 'flex-1 min-w-0'}`}>
+                                <div
+                                    className={`flex gap-3 ${narrow ? 'flex-col' : ''}`}
+                                    style={narrow ? {} : { minHeight: 200, height: 230, maxHeight: 230 }}
+                                >
+                                    <div
+                                        className={narrow ? '' : 'flex-1 min-w-0'}
+                                        style={narrow ? { height: 230 } : {}}
+                                    >
+                                        <PaneCard title="Memory" style={{ height: '100%' }}>
+                                            <MemoryPanel state={state} />
+                                        </PaneCard>
+                                    </div>
+                                    <div style={narrow ? { height: 200 } : { minWidth: 158, width: 162, maxWidth: 162 }}>
+                                        <PaneCard title="Flags" style={{ height: '100%' }}>
+                                            <FlagsPanel state={state} />
+                                        </PaneCard>
+                                    </div>
+                                </div>
+                                <div
+                                    className={narrow ? '' : 'flex-1 min-h-0'}
+                                    style={narrow ? { height: 280 } : {}}
+                                >
+                                    <PaneCard title="Registers" style={{ height: '100%' }}>
+                                        <RegistersPanel state={state} />
+                                    </PaneCard>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            {/* Terminal Resizer */}
-            <div
-                className="flex items-center justify-center cursor-ns-resize select-none"
-                style={{ height: 8, backgroundColor: '#2B2B2B' }}
-                onMouseEnter={() => setResizerHover(true)}
-                onMouseLeave={() => setResizerHover(false)}
-                onMouseDown={(e) => {
-                    e.preventDefault()
-                    const onMove = (ev) => handleResizeDrag(ev)
-                    const onUp = () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
-                    window.addEventListener('mousemove', onMove)
-                    window.addEventListener('mouseup', onUp)
-                }}
-            >
-                <div style={{
-                    width: 40, height: 3,
-                    backgroundColor: resizerHover ? '#E8A845' : '#424547',
-                    borderRadius: 2,
-                }} />
-            </div>
+                {/* Terminal Resizer — hidden in narrow */}
+                {!narrow && (
+                    <div
+                        className="flex items-center justify-center cursor-ns-resize select-none shrink-0"
+                        style={{ height: 8, backgroundColor: '#2B2B2B' }}
+                        onMouseEnter={() => setResizerHover(true)}
+                        onMouseLeave={() => setResizerHover(false)}
+                        onMouseDown={(e) => {
+                            e.preventDefault()
+                            const onMove = (ev) => handleResizeDrag(ev)
+                            const onUp = () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
+                            window.addEventListener('mousemove', onMove)
+                            window.addEventListener('mouseup', onUp)
+                        }}
+                    >
+                        <div style={{
+                            width: 40, height: 3,
+                            backgroundColor: resizerHover ? '#E8A845' : '#424547',
+                            borderRadius: 2,
+                        }} />
+                    </div>
+                )}
 
-            {/* Terminal */}
-            <div
-                className="flex flex-col"
-                style={{
-                    height: terminalHeight, minHeight: 145,
-                    backgroundColor: '#141618',
-                    borderTop: '1px solid #424547',
-                    boxShadow: terminalInputActive ? '0 -4px 20px rgba(78,201,78,0.18)' : 'none',
-                    transition: 'box-shadow 0.2s ease-in-out',
-                }}
-            >
-                {/* Terminal Header */}
+                {/* Terminal */}
                 <div
-                    className="flex items-center px-3.5"
+                    className="flex flex-col shrink-0"
                     style={{
-                        height: 28, minHeight: 28,
-                        backgroundColor: '#1A1C1E',
-                        borderBottom: '1px solid #424547',
-                    }}
-                >
-                    <span className="font-sans text-[10.5px] font-bold text-text-muted">Terminal</span>
-                    <div className="flex-1" />
-                    <span className="font-sans text-[10px]" style={{ color: '#444849' }}>Input enabled on scanf</span>
-                </div>
-
-                {/* Terminal Output */}
-                <div
-                    ref={terminalScrollRef}
-                    className="flex-1 overflow-y-auto overflow-x-hidden"
-                    style={{ backgroundColor: '#141618' }}
-                >
-                    {terminalLines.map((line, i) => (
-                        <div key={i} className="flex items-start" style={{ minHeight: 20 }}>
-                            {line.arrow && (
-                                <span className="font-mono text-[12px] shrink-0" style={{ color: line.color, padding: '1px 6px 1px 14px' }}>❯</span>
-                            )}
-                            <span
-                                className="font-mono text-[12px]"
-                                style={{
-                                    color: line.color,
-                                    padding: line.arrow ? '1px 14px 1px 0' : '1px 14px',
-                                    whiteSpace: line.arrow ? 'nowrap' : 'pre-wrap',
-                                    wordBreak: 'break-word',
-                                }}
-                            >
-                                {line.text}
-                            </span>
-                        </div>
-                    ))}
-                </div>
-
-                {/* Terminal Input Row */}
-                <div
-                    className="flex items-center"
-                    style={{
-                        height: 30, minHeight: 30,
+                        height: narrow ? 200 : terminalHeight, minHeight: 145,
                         backgroundColor: '#141618',
                         borderTop: '1px solid #424547',
+                        boxShadow: terminalInputActive ? '0 -4px 20px rgba(78,201,78,0.18)' : 'none',
+                        transition: 'box-shadow 0.2s ease-in-out',
                     }}
                 >
-                    <span className="font-mono text-[12px] text-text-muted" style={{ padding: '0 8px 0 14px' }}>❯</span>
-                    <input
-                        ref={terminalInputRef}
-                        type="text"
-                        value={terminalInputValue}
-                        onChange={e => setTerminalInputValue(e.target.value)}
-                        onKeyDown={e => { if (e.key === 'Enter' && terminalInputActive) handleTerminalSubmit() }}
-                        readOnly={!terminalInputActive}
-                        placeholder={terminalInputActive ? 'Type input and press Enter...' : 'No input requested yet.'}
-                        className="flex-1 bg-transparent border-none outline-none font-mono text-[12px]"
+                    {/* Terminal Header */}
+                    <div
+                        className="flex items-center px-3.5 shrink-0"
                         style={{
-                            color: terminalInputActive ? '#4EC94E' : '#777777',
-                            caretColor: terminalInputActive ? '#4EC94E' : 'transparent',
+                            height: 28, minHeight: 28,
+                            backgroundColor: '#1A1C1E',
+                            borderBottom: '1px solid #424547',
                         }}
-                    />
+                    >
+                        <span className="font-sans text-[10.5px] font-bold text-text-muted">Terminal</span>
+                        <div className="flex-1" />
+                        <span className="font-sans text-[10px]" style={{ color: '#444849' }}>Input enabled on scanf</span>
+                    </div>
+
+                    {/* Terminal Output */}
+                    <div
+                        ref={terminalScrollRef}
+                        className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden"
+                        style={{ backgroundColor: '#141618' }}
+                    >
+                        {terminalLines.map((line, i) => (
+                            <div key={i} className="flex items-start" style={{ minHeight: 20 }}>
+                                {line.arrow && (
+                                    <span className="font-mono text-[12px] shrink-0" style={{ color: line.color, padding: '1px 6px 1px 14px' }}>❯</span>
+                                )}
+                                <span
+                                    className="font-mono text-[12px]"
+                                    style={{
+                                        color: line.color,
+                                        padding: line.arrow ? '1px 14px 1px 0' : '1px 14px',
+                                        whiteSpace: line.arrow ? 'nowrap' : 'pre-wrap',
+                                        wordBreak: 'break-word',
+                                    }}
+                                >
+                                {line.text}
+                            </span>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Terminal Input Row */}
+                    <div
+                        className="flex items-center shrink-0"
+                        style={{
+                            height: 30, minHeight: 30,
+                            backgroundColor: '#141618',
+                            borderTop: '1px solid #424547',
+                        }}
+                    >
+                        <span className="font-mono text-[12px] text-text-muted" style={{ padding: '0 8px 0 14px' }}>❯</span>
+                        <input
+                            ref={terminalInputRef}
+                            type="text"
+                            value={terminalInputValue}
+                            onChange={e => setTerminalInputValue(e.target.value)}
+                            onKeyDown={e => { if (e.key === 'Enter' && terminalInputActive) handleTerminalSubmit() }}
+                            readOnly={!terminalInputActive}
+                            placeholder={terminalInputActive ? 'Type input and press Enter...' : 'No input requested yet.'}
+                            className="flex-1 bg-transparent border-none outline-none font-mono text-[12px]"
+                            style={{
+                                color: terminalInputActive ? '#4EC94E' : '#777777',
+                                caretColor: terminalInputActive ? '#4EC94E' : 'transparent',
+                            }}
+                        />
+                    </div>
                 </div>
+
             </div>
         </div>
     )
