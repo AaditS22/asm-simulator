@@ -33,6 +33,7 @@ public class SimulatorSession {
 
     private Map<Long, Long> lastMemoryValues = new LinkedHashMap<>();
     private final Set<Long> manualTrackedAddresses = new TreeSet<>();
+    private Set<Integer> validTextLines = new TreeSet<>();
 
     /**
      * Loads the given code into the simulator and returns a response DTO.
@@ -159,6 +160,70 @@ public class SimulatorSession {
             return step();
         } catch (Exception e) {
             return new StepResponseDto(null, null, "", false, buildState(false), e.getMessage());
+        }
+    }
+
+    private int getInstructionIndexForLine(int lineIndex) {
+        if (!validTextLines.contains(lineIndex)) return -1;
+        for (int i = 0; i < instructionLineMap.size(); i++) {
+            if (instructionLineMap.get(i) >= lineIndex) return i;
+        }
+        return -1;
+    }
+
+    /**
+     * Runs the program until it reaches a breakpoint.
+     * @param breakpointLines The line numbers of the breakpoints
+     * @return A RunResponseDto containing the final state and output
+     */
+    public synchronized RunResponseDto runToBreakpoints(List<Integer> breakpointLines) {
+        if (!loaded) {
+            return new RunResponseDto("", null, null, 0, null,
+                    "No program loaded");
+        }
+        if (simulator.isHalted()) {
+            return new RunResponseDto("", null, null, simulator.getExitCode(),
+                    buildState(false),
+                    "Program has already halted");
+        }
+
+        Set<Integer> breakpointIndices = new TreeSet<>();
+        if (breakpointLines != null) {
+            for (int bl : breakpointLines) {
+                int idx = getInstructionIndexForLine(bl);
+                if (idx != -1) breakpointIndices.add(idx);
+            }
+        }
+
+        StringBuilder outputBuf = new StringBuilder();
+        String lastDesc = "";
+        String lastMnemonic = "";
+        int steps = 0;
+
+        try {
+            while (!simulator.isHalted() && !simulator.isWaitingForInput() && steps < RUN_STEP_LIMIT) {
+                Instruction currentInst = simulator.getCurrentInstruction();
+                if (currentInst != null) lastMnemonic = currentInst.getMnemonic();
+
+                StepResult result = simulator.step();
+                stepCount++;
+                steps++;
+
+                if (result.hasOutput()) outputBuf.append(result.output());
+                if (result.description() != null) lastDesc = result.description();
+
+                if (breakpointIndices.contains(simulator.getCurrentInstructionIndex())) {
+                    break;
+                }
+            }
+
+            autoScrollStack();
+            long exitCode = simulator.isHalted() ? simulator.getExitCode() : 0;
+            return new RunResponseDto(outputBuf.toString(), lastDesc, lastMnemonic,
+                    exitCode, buildState(true), null);
+        } catch (Exception e) {
+            return new RunResponseDto(outputBuf.toString(), lastDesc, lastMnemonic,
+                    0, buildState(false), e.getMessage());
         }
     }
 
@@ -342,6 +407,7 @@ public class SimulatorSession {
 
     private List<Integer> buildInstructionLineMap(String code) {
         List<Integer> map = new ArrayList<>();
+        validTextLines.clear();
         String[] lines = code.split("\\R", -1);
         boolean inText = true;
 
@@ -350,6 +416,20 @@ public class SimulatorSession {
             int commentIdx = line.indexOf('#');
             if (commentIdx >= 0) line = line.substring(0, commentIdx);
             line = line.trim();
+
+            if (line.equals(".text")) { inText = true; continue; }
+            if (line.equals(".data") || line.equals(".bss") || line.equals(".rodata")) {
+                inText = false; continue;
+            }
+            if (line.startsWith(".section")) {
+                inText = line.contains("text");
+                continue;
+            }
+
+            if (inText && !line.isEmpty() && !line.startsWith(".")) {
+                validTextLines.add(i);
+            }
+
             if (line.isEmpty()) continue;
 
             int colonIdx = line.indexOf(':');
@@ -360,15 +440,6 @@ public class SimulatorSession {
                 }
             }
             if (line.isEmpty()) continue;
-
-            if (line.equals(".text")) { inText = true; continue; }
-            if (line.equals(".data") || line.equals(".bss") || line.equals(".rodata")) {
-                inText = false; continue;
-            }
-            if (line.startsWith(".section")) {
-                inText = line.contains("text");
-                continue;
-            }
             if (line.startsWith(".")) continue;
 
             if (inText) {

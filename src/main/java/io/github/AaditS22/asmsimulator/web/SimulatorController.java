@@ -7,6 +7,7 @@ import io.github.AaditS22.asmsimulator.web.dto.StepResponseDto;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -125,5 +126,21 @@ public class SimulatorController {
                                                 @RequestBody Map<String, String> body) {
         String address = body.getOrDefault("address", "");
         return ResponseEntity.ok(service.trackMemoryAddress(sessionId, address));
+    }
+
+    /**
+     * Runs the program until it reaches a breakpoint
+     * @param sessionId the session ID of the user
+     * @param body the breakpoints to run to
+     * @return a RunResponseDto with the final state and output
+     */
+    @PostMapping("/run-to-bp")
+    public ResponseEntity<RunResponseDto> runToBreakpoints(@RequestHeader("X-Session-Id") String sessionId,
+                                                           @RequestBody Map<String, List<Integer>> body) {
+        List<Integer> bps = body.getOrDefault("breakpoints", java.util.Collections.emptyList());
+        RunResponseDto result = service.runToBreakpoints(sessionId, bps);
+        return result.error() == null
+                ? ResponseEntity.ok(result)
+                : ResponseEntity.badRequest().body(result);
     }
 }
