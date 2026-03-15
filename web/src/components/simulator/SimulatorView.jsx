@@ -141,6 +141,8 @@ export default function SimulatorView({ code, forceNavigate }) {
     const [narrow, setNarrow] = useState(false)
     const [showSmallScreenBanner, setShowSmallScreenBanner] = useState(false)
     const [bannerDismissed, setBannerDismissed] = useState(false)
+    const [validTextLines, setValidTextLines] = useState(new Set())
+    const [breakpointLines, setBreakpointLines] = useState(new Set())
 
     const codeLines = (code || '').split(/\r?\n/)
 
@@ -168,6 +170,25 @@ export default function SimulatorView({ code, forceNavigate }) {
                 setState(res.state)
                 setTerminalLines([{ text: 'Parsed successfully. Ready to simulate.', color: '#4EC94E', arrow: false, endsWithNewline: true }])
                 highlightInstruction(res.state)
+
+                const newValid = new Set()
+                let inText = true
+                const lines = code.split(/\r?\n/)
+                for (let i = 0; i < lines.length; i++) {
+                    let line = lines[i]
+                    const commentIdx = line.indexOf('#')
+                    if (commentIdx >= 0) line = line.substring(0, commentIdx)
+                    line = line.trim()
+
+                    if (line === '.text') { inText = true; continue }
+                    if (line === '.data' || line === '.bss' || line === '.rodata') { inText = false; continue }
+                    if (line.startsWith('.section')) { inText = line.includes('text'); continue }
+
+                    if (inText && line !== '' && !line.startsWith('.')) {
+                        newValid.add(i)
+                    }
+                }
+                setValidTextLines(newValid)
             }
         }).catch(err => {
             setParseSuccess(false)
@@ -435,6 +456,56 @@ export default function SimulatorView({ code, forceNavigate }) {
         }
     }
 
+    function toggleBreakpoint(i) {
+        if (!validTextLines.has(i)) return
+        setBreakpointLines(prev => {
+            const next = new Set(prev)
+            if (next.has(i)) next.delete(i)
+            else next.add(i)
+            return next
+        })
+    }
+
+    async function handleRunToBreakpoint() {
+        if (!parseSuccess) return
+        if (state?.status === 'HALTED' || state?.status === 'WAITING_FOR_INPUT') return
+        stopAutoPlay()
+        setControlsEnabled(false)
+        try {
+            const res = await api.runToBp(Array.from(breakpointLines))
+            if (res.error && !res.state) {
+                appendTerminalOutput('\nError: ' + res.error, '#FF9B94')
+                setControlsEnabled(false)
+                return
+            }
+            setState(res.state)
+            setStepCount(res.state?.stepCount ?? 0)
+            if (res.lastDescription) {
+                setInstrDesc(res.lastDescription)
+                setInstrMnemonic(res.lastMnemonic ? res.lastMnemonic.toUpperCase() : null)
+            }
+            if (res.output) appendTerminalOutput(res.output, '#D4D4D4')
+
+            if (res.state?.status === 'HALTED') {
+                const exitCode = res.exitCode ?? 0
+                const color = exitCode === 0 ? '#4EC94E' : '#FF9B94'
+                addTerminalLine(`[Program exited with code ${exitCode}]`, color)
+                setHighlightedLine(-1)
+                setControlsEnabled(false)
+            } else if (res.state?.status === 'WAITING_FOR_INPUT') {
+                activateTerminalInput()
+            } else {
+                highlightInstruction(res.state)
+                setControlsEnabled(true)
+            }
+        } catch (err) {
+            let msg = err.message
+            try { msg = JSON.parse(err.message)?.error || err.message } catch {}
+            appendTerminalOutput('\nError: ' + msg, '#FF9B94')
+            setControlsEnabled(false)
+        }
+    }
+
     function activateTerminalInput() {
         setTerminalInputActive(true)
         setTerminalInputValue('')
@@ -547,6 +618,19 @@ export default function SimulatorView({ code, forceNavigate }) {
                     Step ▶
                 </button>
 
+                <div title="Click on a line number to add a breakpoint." className="flex items-center shrink-0">
+                    <button
+                        disabled={!controlsEnabled || breakpointLines.size === 0}
+                        onClick={handleRunToBreakpoint}
+                        className="font-sans text-[12px] font-bold px-3 py-1.5 rounded transition-colors disabled:opacity-50"
+                        style={{ backgroundColor: '#3C3F41', color: '#BBBBBB', border: '1px solid #424547' }}
+                        onMouseEnter={e => { if (!e.currentTarget.disabled) { e.currentTarget.style.backgroundColor = '#4C5052'; e.currentTarget.style.color = '#E8E8E8' } }}
+                        onMouseLeave={e => { if (!e.currentTarget.disabled) { e.currentTarget.style.backgroundColor = '#3C3F41'; e.currentTarget.style.color = '#BBBBBB' } }}
+                    >
+                        Run to Breakpoint ⏭
+                    </button>
+                </div>
+
                 <div className="flex items-center gap-2">
                     <button
                         disabled={!controlsEnabled && !isAutoPlaying}
@@ -642,15 +726,17 @@ export default function SimulatorView({ code, forceNavigate }) {
                                         }}
                                     >
                                     <span
+                                        onClick={() => toggleBreakpoint(i)}
                                         className="font-mono text-[13px] text-right shrink-0"
                                         style={{
-                                            width: 48, minWidth: 48,
+                                            width: 60, minWidth: 60,
                                             padding: '1px 8px',
-                                            color: '#555555',
+                                            color: breakpointLines.has(i) ? '#E57373' : '#555555',
                                             backgroundColor: highlightedLine === i ? '#2A2B2E' : '#252527',
+                                            cursor: validTextLines.has(i) ? 'pointer' : 'default',
                                         }}
                                     >
-                                        {i + 1}
+                                        {breakpointLines.has(i) ? `${i + 1} ●` : i + 1}
                                     </span>
                                         <span className="font-mono text-[13px]" style={{ padding: '1px 14px 1px 10px', whiteSpace: 'pre' }}>
                                         {highlightLine(line).map((tok, j) => (

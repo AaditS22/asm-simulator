@@ -10,16 +10,9 @@ import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
-import javafx.scene.control.Button;
-import javafx.scene.control.Label;
-import javafx.scene.control.ScrollPane;
-import javafx.scene.control.Slider;
-import javafx.scene.control.TextField;
+import javafx.scene.control.*;
 import javafx.scene.input.KeyCode;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.Priority;
-import javafx.scene.layout.Region;
-import javafx.scene.layout.VBox;
+import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
@@ -158,6 +151,13 @@ public class SimulatorView extends VBox {
     private volatile boolean isAutoPlaying = false;
     private volatile boolean isRunningToEnd = false;
     private Thread executionThread;
+
+    // Breakpoint tracking
+    private Set<Integer> breakpointLines = new HashSet<>();
+    private Set<Integer> breakpointIndices = new HashSet<>();
+    private Set<Integer> validTextLines = new HashSet<>();
+    private Button runToBreakpointBtn;
+    private volatile boolean isRunningToBreakpoint = false;
 
     private final Simulator simulator = new Simulator();
     private boolean parseSuccess = false;
@@ -356,6 +356,21 @@ public class SimulatorView extends VBox {
             if (!stepBtn.isDisabled()) stepBtn.setStyle(BTN_PRIMARY); });
         stepBtn.setOnAction(e -> handleStep());
 
+        runToBreakpointBtn = new Button("Run to Breakpoint ⏭");
+        runToBreakpointBtn.setStyle(BTN_SECONDARY);
+        runToBreakpointBtn.setOnMouseEntered(e -> {
+            if (!runToBreakpointBtn.isDisabled()) runToBreakpointBtn.setStyle(BTN_SECONDARY_HOVER); });
+        runToBreakpointBtn.setOnMouseExited(e -> {
+            if (!runToBreakpointBtn.isDisabled()) runToBreakpointBtn.setStyle(BTN_SECONDARY); });
+        runToBreakpointBtn.setOnAction(e -> handleRunToBreakpoint());
+        runToBreakpointBtn.setDisable(true);
+
+        StackPane runToBpWrapper = new StackPane(runToBreakpointBtn);
+        javafx.scene.control.Tooltip bpTooltip = new javafx.scene.control.Tooltip("Click on a line number"
+                + " to add a breakpoint.");
+        bpTooltip.setShowDelay(javafx.util.Duration.millis(200));
+        Tooltip.install(runToBpWrapper, bpTooltip);
+
         autoPlayBtn = new Button("Autoplay ▶▶");
         autoPlayBtn.setStyle(BTN_SECONDARY);
         autoPlayBtn.setOnMouseEntered(e -> {
@@ -392,7 +407,8 @@ public class SimulatorView extends VBox {
                         "-fx-padding: 0 4 0 4;"
         );
 
-        bar.getChildren().addAll(restartBtn, stepBtn, autoPlayBox, runToEndBtn, spacer, stepCounterLabel);
+        bar.getChildren().addAll(restartBtn, stepBtn, runToBpWrapper, autoPlayBox, runToEndBtn,
+                spacer, stepCounterLabel);
         return bar;
     }
 
@@ -508,8 +524,11 @@ public class SimulatorView extends VBox {
                         "-fx-background-color: " + BG_GUTTER + ";" +
                         "-fx-pref-width: 48;" +
                         "-fx-min-width: 48;" +
-                        "-fx-alignment: CENTER_RIGHT;"
+                        "-fx-alignment: CENTER_RIGHT;" +
+                        "-fx-cursor: hand;"
         );
+
+        gutterLabel.setOnMouseClicked(e -> toggleBreakpoint(lineNumber - 1));
 
         TextFlow codeFlow = AsmHighlighter.buildHighlightedLine(lineText);
         codeFlow.setStyle(
@@ -686,6 +705,8 @@ public class SimulatorView extends VBox {
             if (registersView != null) registersView.reset(simulator.getState());
             if (flagsView != null) flagsView.reset(simulator.getState());
             if (memoryView != null) memoryView.reset(simulator.getState(), simulator.getLabelManager());
+            updateGutterVisuals();
+            updateRunToNextBtnState();
         } catch (Exception e) {
             parseSuccess = false;
             String msg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
@@ -697,6 +718,7 @@ public class SimulatorView extends VBox {
 
     private List<Integer> buildInstructionLineMap() {
         List<Integer> map = new ArrayList<>();
+        validTextLines.clear();
         String[] lines = assemblyCode.split("\\R", -1);
         boolean inText = true;
 
@@ -706,16 +728,6 @@ public class SimulatorView extends VBox {
             int commentIdx = line.indexOf('#');
             if (commentIdx >= 0) line = line.substring(0, commentIdx);
             line = line.trim();
-            if (line.isEmpty()) continue;
-
-            int colonIdx = line.indexOf(':');
-            if (colonIdx > 0) {
-                String possibleLabel = line.substring(0, colonIdx).trim();
-                if (!possibleLabel.contains(" ") && !possibleLabel.contains("\t")) {
-                    line = line.substring(colonIdx + 1).trim();
-                }
-            }
-            if (line.isEmpty()) continue;
 
             if (line.equals(".text")) { inText = true; continue; }
             if (line.equals(".data") || line.equals(".bss") || line.equals(".rodata")) {
@@ -726,6 +738,20 @@ public class SimulatorView extends VBox {
                 continue;
             }
 
+            if (inText && !line.isEmpty() && !line.startsWith(".")) {
+                validTextLines.add(i);
+            }
+
+            if (line.isEmpty()) continue;
+
+            int colonIdx = line.indexOf(':');
+            if (colonIdx > 0) {
+                String possibleLabel = line.substring(0, colonIdx).trim();
+                if (!possibleLabel.contains(" ") && !possibleLabel.contains("\t")) {
+                    line = line.substring(colonIdx + 1).trim();
+                }
+            }
+            if (line.isEmpty()) continue;
             if (line.startsWith(".")) continue;
 
             if (inText) {
@@ -914,9 +940,151 @@ public class SimulatorView extends VBox {
         executionThread.start();
     }
 
+    private void handleRunToBreakpoint() {
+        if (!parseSuccess || simulator.isHalted() || simulator.isWaitingForInput()) return;
+
+        isRunningToBreakpoint = true;
+        setControlsEnabled(false);
+        runToBreakpointBtn.setText("Running...");
+
+        executionThread = new Thread(() -> {
+            StringBuilder batchedOutput = new StringBuilder();
+            int batchSteps = 0;
+            String lastMnemonic = "";
+            String lastDesc = "";
+
+            while (isRunningToBreakpoint && !simulator.isHalted() && !simulator.isWaitingForInput()) {
+                try {
+                    Instruction currentInst = simulator.getCurrentInstruction();
+                    lastMnemonic = currentInst != null ? currentInst.getMnemonic().toUpperCase() : "INSTRUCTION";
+
+                    StepResult result = simulator.step();
+                    currentStep++;
+                    lastDesc = result.description();
+
+                    if (result.hasOutput()) {
+                        batchedOutput.append(result.output());
+                    }
+
+                    batchSteps++;
+                    boolean hitBreakpoint = breakpointIndices.contains(simulator.getCurrentInstructionIndex());
+                    boolean finishing = simulator.isHalted() || simulator.isWaitingForInput() || hitBreakpoint;
+
+                    if (batchSteps >= 1000 || finishing) {
+                        batchSteps = 0;
+                        int stepSnapshot = currentStep;
+                        String descSnapshot = lastDesc;
+                        String mnemonicSnapshot = lastMnemonic;
+
+                        String out = batchedOutput.toString();
+                        batchedOutput.setLength(0);
+
+                        boolean haltedSnapshot = simulator.isHalted();
+                        boolean waitingSnapshot = simulator.isWaitingForInput();
+
+                        if (finishing) {
+                            Platform.runLater(() -> {
+                                if (!out.isEmpty()) appendTerminalOutput(out, TERMINAL_WHITE);
+                                setStepCount(stepSnapshot);
+                                setInstructionDescription(descSnapshot, mnemonicSnapshot);
+                                updateViewPanels();
+                                highlightCurrentInstruction();
+
+                                if (haltedSnapshot) {
+                                    handleHalt();
+                                } else if (waitingSnapshot || hitBreakpoint) {
+                                    isRunningToBreakpoint = false;
+                                    stopAutomatedExecution();
+                                    if (waitingSnapshot) activateTerminalInput();
+                                }
+                            });
+                            if (hitBreakpoint) break;
+                        } else {
+                            Platform.runLater(() -> {
+                                if (!out.isEmpty()) appendTerminalOutput(out, TERMINAL_WHITE);
+                                setStepCount(stepSnapshot);
+                                setInstructionDescription(descSnapshot, mnemonicSnapshot);
+                            });
+                        }
+                    }
+                } catch (Exception e) {
+                    String msg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
+                    Platform.runLater(() -> {
+                        appendTerminalError("\nError: " + msg);
+                        clearHighlight();
+                    });
+                    break;
+                }
+            }
+            Platform.runLater(this::stopAutomatedExecution);
+        });
+        executionThread.setDaemon(true);
+        executionThread.start();
+    }
+
+    private int getInstructionIndexForLine(int lineIndex) {
+        if (!validTextLines.contains(lineIndex)) return -1;
+        for (int i = 0; i < instructionLineMap.size(); i++) {
+            if (instructionLineMap.get(i) >= lineIndex) return i;
+        }
+        return -1;
+    }
+
+    private void toggleBreakpoint(int lineIndex) {
+        int instIndex = getInstructionIndexForLine(lineIndex);
+        if (instIndex == -1) return;
+
+        if (breakpointLines.contains(lineIndex)) {
+            breakpointLines.remove(lineIndex);
+        } else {
+            breakpointLines.add(lineIndex);
+        }
+
+        breakpointIndices.clear();
+        for (int bl : breakpointLines) {
+            int idx = getInstructionIndexForLine(bl);
+            if (idx != -1) breakpointIndices.add(idx);
+        }
+
+        updateGutterVisuals();
+        updateRunToNextBtnState();
+    }
+
+    private void updateGutterVisuals() {
+        String baseStyle = "-fx-font-family: " + MONO + ";" +
+                "-fx-font-size: 13;" +
+                "-fx-padding: 1 8 1 8;" +
+                "-fx-background-color: " + BG_GUTTER + ";" +
+                "-fx-pref-width: 48;" +
+                "-fx-min-width: 48;" +
+                "-fx-alignment: CENTER_RIGHT;" +
+                "-fx-cursor: hand;";
+
+        for (int i = 0; i < codeRows.size(); i++) {
+            HBox row = codeRows.get(i);
+            Label gutter = (Label) row.getChildren().get(0);
+            if (breakpointLines.contains(i)) {
+                gutter.setText((i + 1) + " \u25CF");
+                gutter.setStyle(baseStyle + "-fx-text-fill: #E57373;");
+            } else {
+                gutter.setText(String.valueOf(i + 1));
+                gutter.setStyle(baseStyle + "-fx-text-fill: " + GUTTER_TEXT + ";");
+            }
+        }
+    }
+
+    private void updateRunToNextBtnState() {
+        if (runToBreakpointBtn != null) {
+            boolean noBreakpoints = breakpointIndices.isEmpty();
+            runToBreakpointBtn.setDisable(noBreakpoints || !parseSuccess || simulator.isHalted()
+                    || simulator.isWaitingForInput());
+        }
+    }
+
     private void stopAutomatedExecution() {
         isAutoPlaying = false;
         isRunningToEnd = false;
+        isRunningToBreakpoint = false;
         if (executionThread != null && executionThread.isAlive()) {
             executionThread.interrupt();
         }
@@ -926,7 +1094,10 @@ public class SimulatorView extends VBox {
             autoPlayBtn.setStyle(BTN_SECONDARY);
             runToEndBtn.setText("Run to End ⏭");
             runToEndBtn.setStyle(BTN_SECONDARY);
-
+            if (runToBreakpointBtn != null) {
+                runToBreakpointBtn.setText("Run to Breakpoint ⏭");
+                runToBreakpointBtn.setStyle(BTN_SECONDARY);
+            }
             if (!simulator.isHalted() && !simulator.isWaitingForInput()) {
                 setControlsEnabled(true);
             }

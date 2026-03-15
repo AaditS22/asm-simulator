@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -55,5 +56,9 @@ public class SimulatorService {
 
     public StateDto trackMemoryAddress(String sessionId, String addressStr) {
         return getSession(sessionId).trackMemoryAddress(addressStr);
+    }
+
+    public RunResponseDto runToBreakpoints(String sessionId, List<Integer> breakpoints) {
+        return getSession(sessionId).runToBreakpoints(breakpoints);
     }
 }

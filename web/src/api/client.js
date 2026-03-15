@@ -30,4 +30,5 @@ export const api = {
     scrollStack:  (direction) => request('POST', '/stack/scroll',  { direction }),
     trackMemory:  (address)   => request('POST', '/memory/track',  { address }),
     ping:         ()          => request('GET',  '/state',  null),
+    runToBp:      (breakpoints) => request('POST', '/run-to-bp', { breakpoints }),
 }
