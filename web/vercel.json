@@ -5,7 +5,7 @@
       "destination": "https://asm-simulator-production.up.railway.app/api/:path*"
     },
     {
-      "source": "/((?!api/).*)",
+      "source": "/:path*",
       "destination": "/index.html"
     }
   ]
